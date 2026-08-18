@@ -44,26 +44,32 @@ enum ModelTests {
         precondition(registry.accounts[1].lastUsage?.weekly?.remainingPercent() == 90)
         precondition(registry.otherAccount()?.accountKey == "account-b")
 
+        let testNow = Date(timeIntervalSince1970: 100_000)
         let countdown = RateLimitWindow(
             usedPercent: 20,
             windowMinutes: 300,
             resetsAt: 100_000 + 86_400 + 31 * 60)
-        precondition(countdown.resetText(now: Date(timeIntervalSince1970: 100_000)) == "1d 31min")
-        precondition(RateLimitWindow(
+        precondition(countdown.resetText(now: testNow) == "1d 31min")
+
+        let weeklyReset = TimeInterval(100_000 + 6 * 86_400 + 14 * 3_600 + 31 * 60)
+        let weeklyCountdown = RateLimitWindow(
             usedPercent: 20,
             windowMinutes: 10_080,
-            resetsAt: 100_000 + 6 * 86_400 + 14 * 3_600 + 31 * 60).resetText(
-                now: Date(timeIntervalSince1970: 100_000)) == "6d 14h")
-        precondition(RateLimitWindow(
+            resetsAt: weeklyReset)
+        precondition(weeklyCountdown.resetText(now: testNow) == "6d 14h")
+
+        let hourlyReset = TimeInterval(100_000 + 3 * 3_600 + 12 * 60)
+        let hourlyCountdown = RateLimitWindow(
             usedPercent: 20,
             windowMinutes: 300,
-            resetsAt: 100_000 + 3 * 3_600 + 12 * 60).resetText(
-                now: Date(timeIntervalSince1970: 100_000)) == "3h 12min")
+            resetsAt: hourlyReset)
+        precondition(hourlyCountdown.resetText(now: testNow) == "3h 12min")
+
         precondition(RateLimitWindow(
             usedPercent: 20,
             windowMinutes: 300,
             resetsAt: 100_000 + 31 * 60).resetText(
-                now: Date(timeIntervalSince1970: 100_000)) == "31min")
+                now: testNow) == "31min")
         print("Model tests passed")
     }
 }
