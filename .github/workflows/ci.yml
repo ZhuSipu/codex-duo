@@ -1,0 +1,19 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test-and-build:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test models
+        run: ./Scripts/test.sh
+      - name: Build and verify app
+        run: |
+          app_path=$(./Scripts/build_app.sh)
+          codesign --verify --deep --strict "$app_path"
+          test -x "$app_path/Contents/MacOS/CodexDuo"
