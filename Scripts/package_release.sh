@@ -15,6 +15,6 @@ fi
 
 app_path=$("$project_dir/Scripts/build_app.sh")
 ditto -c -k --sequesterRsrc --keepParent "$app_path" "$archive"
-unzip -tq "$archive"
+unzip -tq "$archive" >/dev/null
 
 echo "$archive"
