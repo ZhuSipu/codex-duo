@@ -48,17 +48,17 @@ enum ModelTests {
         let countdown = RateLimitWindow(
             usedPercent: 20,
             windowMinutes: 300,
-            resetsAt: 100_000 + 86_400 + 31 * 60)
+            resetsAt: 188_260)
         precondition(countdown.resetText(now: testNow) == "1d 31min")
 
-        let weeklyReset = TimeInterval(100_000 + 6 * 86_400 + 14 * 3_600 + 31 * 60)
+        let weeklyReset: TimeInterval = 670_660
         let weeklyCountdown = RateLimitWindow(
             usedPercent: 20,
             windowMinutes: 10_080,
             resetsAt: weeklyReset)
         precondition(weeklyCountdown.resetText(now: testNow) == "6d 14h")
 
-        let hourlyReset = TimeInterval(100_000 + 3 * 3_600 + 12 * 60)
+        let hourlyReset: TimeInterval = 111_520
         let hourlyCountdown = RateLimitWindow(
             usedPercent: 20,
             windowMinutes: 300,
@@ -68,7 +68,7 @@ enum ModelTests {
         precondition(RateLimitWindow(
             usedPercent: 20,
             windowMinutes: 300,
-            resetsAt: 100_000 + 31 * 60).resetText(
+            resetsAt: 101_860).resetText(
                 now: testNow) == "31min")
         print("Model tests passed")
     }
