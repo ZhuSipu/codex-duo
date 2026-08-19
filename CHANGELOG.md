@@ -2,6 +2,13 @@
 
 All notable changes to Codex Duo are documented here.
 
+## 0.5.1 - 2026-08-18
+
+- Rebalanced the outer shell, account card, and switch-action corner radii.
+- Increased the card's breathing room while narrowing the full panel to 344 points.
+- Removed the switch action's persistent outline and softened its idle material.
+- Reduced nested-surface contrast for a cleaner first-party macOS hierarchy.
+
 ## 0.5.0 - 2026-08-18
 
 - Redesigned the menu with native AppKit visual-effect materials and adaptive light/dark styling.

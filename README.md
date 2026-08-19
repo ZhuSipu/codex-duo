@@ -62,7 +62,7 @@ Create a versioned release archive:
 ./Scripts/package_release.sh
 ```
 
-The archive is written to `dist/`. GitHub Actions runs the same tests and build on every push and pull request. Pushing a tag such as `v0.5.0` creates a GitHub release when the tag matches the version in `Resources/Info.plist`.
+The archive is written to `dist/`. GitHub Actions runs the same tests and build on every push and pull request. Pushing a tag such as `v0.5.1` creates a GitHub release when the tag matches the version in `Resources/Info.plist`.
 
 ## How it works
 

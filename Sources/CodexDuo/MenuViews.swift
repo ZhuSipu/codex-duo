@@ -1,7 +1,7 @@
 import AppKit
 import QuartzCore
 
-private let panelWidth: CGFloat = 352
+private let panelWidth: CGFloat = 344
 
 func codexDuoRoundedFont(ofSize size: CGFloat, weight: NSFont.Weight) -> NSFont {
     let base = NSFont.systemFont(ofSize: size, weight: weight)
@@ -30,7 +30,7 @@ private final class GlassSurfaceView: NSVisualEffectView {
         self.layer?.cornerRadius = cornerRadius
         self.layer?.cornerCurve = .continuous
         self.layer?.masksToBounds = true
-        self.layer?.borderWidth = 0.5
+        self.layer?.borderWidth = role == .card ? 0.5 : 0
         self.sheen.startPoint = CGPoint(x: 0.15, y: 1)
         self.sheen.endPoint = CGPoint(x: 0.85, y: 0)
         self.sheen.locations = [0, 0.38, 1]
@@ -50,11 +50,11 @@ private final class GlassSurfaceView: NSVisualEffectView {
 
     private func updateGlassAppearance() {
         let dark = self.effectiveAppearance.codexDuoIsDark
-        let baseAlpha: CGFloat = self.role == .card ? (dark ? 0.09 : 0.13) : (dark ? 0.075 : 0.09)
-        self.layer?.borderColor = NSColor.white.withAlphaComponent(dark ? 0.16 : 0.28).cgColor
+        let baseAlpha: CGFloat = self.role == .card ? (dark ? 0.075 : 0.10) : (dark ? 0.055 : 0.065)
+        self.layer?.borderColor = NSColor.white.withAlphaComponent(dark ? 0.12 : 0.22).cgColor
         self.layer?.backgroundColor = NSColor.labelColor.withAlphaComponent(baseAlpha).cgColor
         self.sheen.colors = [
-            NSColor.white.withAlphaComponent(dark ? 0.055 : 0.22).cgColor,
+            NSColor.white.withAlphaComponent(dark ? 0.045 : 0.16).cgColor,
             NSColor.white.withAlphaComponent(0).cgColor,
             NSColor.white.withAlphaComponent(dark ? 0.018 : 0.055).cgColor,
         ]
@@ -67,9 +67,9 @@ private final class GlassSurfaceView: NSVisualEffectView {
 final class AccountOverviewView: NSView {
     init(registry: CodexRegistry?, errorMessage: String?) {
         let accountCount = max(1, registry?.accounts.count ?? 0)
-        super.init(frame: NSRect(x: 0, y: 0, width: panelWidth, height: CGFloat(12 + accountCount * 64)))
+        super.init(frame: NSRect(x: 0, y: 0, width: panelWidth, height: CGFloat(16 + accountCount * 62)))
 
-        let card = GlassSurfaceView(role: .card, cornerRadius: 14)
+        let card = GlassSurfaceView(role: .card, cornerRadius: 11.5)
         card.translatesAutoresizingMaskIntoConstraints = false
         addSubview(card)
 
@@ -85,13 +85,13 @@ final class AccountOverviewView: NSView {
                 if index > 0 {
                     let divider = HairlineView()
                     rows.addArrangedSubview(divider)
-                    divider.widthAnchor.constraint(equalToConstant: panelWidth - 44).isActive = true
+                    divider.widthAnchor.constraint(equalToConstant: panelWidth - 52).isActive = true
                     divider.heightAnchor.constraint(equalToConstant: 0.5).isActive = true
                 }
                 let row = AccountRowView(account: account, active: account.accountKey == registry.activeAccountKey)
                 rows.addArrangedSubview(row)
-                row.widthAnchor.constraint(equalToConstant: panelWidth - 36).isActive = true
-                row.heightAnchor.constraint(equalToConstant: 63.5).isActive = true
+                row.widthAnchor.constraint(equalToConstant: panelWidth - 48).isActive = true
+                row.heightAnchor.constraint(equalToConstant: 61.5).isActive = true
             }
         } else {
             let unavailable = NSTextField(labelWithString: errorMessage ?? "Account data is unavailable")
@@ -101,12 +101,12 @@ final class AccountOverviewView: NSView {
         }
 
         NSLayoutConstraint.activate([
-            card.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 8),
-            card.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -8),
-            card.topAnchor.constraint(equalTo: topAnchor, constant: 6),
-            card.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -6),
-            rows.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: 10),
-            rows.trailingAnchor.constraint(equalTo: card.trailingAnchor, constant: -10),
+            card.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 12),
+            card.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -12),
+            card.topAnchor.constraint(equalTo: topAnchor, constant: 8),
+            card.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -8),
+            rows.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: 12),
+            rows.trailingAnchor.constraint(equalTo: card.trailingAnchor, constant: -12),
             rows.centerYAnchor.constraint(equalTo: card.centerYAnchor),
         ])
     }
@@ -308,7 +308,7 @@ private final class MeterTrackView: NSView {
 
 final class SwitchActionView: NSView {
     init(destination: String?, isWorking: Bool, target: AnyObject, action: Selector) {
-        super.init(frame: NSRect(x: 0, y: 0, width: panelWidth, height: 34))
+        super.init(frame: NSRect(x: 0, y: 0, width: panelWidth, height: 35))
         let title: String
         if isWorking { title = "Switching…" }
         else if let destination {
@@ -329,8 +329,8 @@ final class SwitchActionView: NSView {
         button.translatesAutoresizingMaskIntoConstraints = false
         addSubview(button)
         NSLayoutConstraint.activate([
-            button.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 8), button.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -8),
-            button.topAnchor.constraint(equalTo: topAnchor, constant: 2), button.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -4),
+            button.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 12), button.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -12),
+            button.topAnchor.constraint(equalTo: topAnchor, constant: 1), button.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -6),
         ])
     }
     @available(*, unavailable) required init?(coder: NSCoder) { nil }
@@ -338,7 +338,7 @@ final class SwitchActionView: NSView {
 
 private final class HoverButton: NSButton {
     private var trackingAreaReference: NSTrackingArea?
-    private let surface = GlassSurfaceView(role: .action, cornerRadius: 9)
+    private let surface = GlassSurfaceView(role: .action, cornerRadius: 8)
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
         self.wantsLayer = true
@@ -348,7 +348,7 @@ private final class HoverButton: NSButton {
             self.surface.leadingAnchor.constraint(equalTo: self.leadingAnchor), self.surface.trailingAnchor.constraint(equalTo: self.trailingAnchor),
             self.surface.topAnchor.constraint(equalTo: self.topAnchor), self.surface.bottomAnchor.constraint(equalTo: self.bottomAnchor),
         ])
-        self.surface.layer?.opacity = 0.72
+        self.surface.layer?.opacity = 0.58
     }
     convenience init(title: String, target: AnyObject?, action: Selector?) {
         self.init(frame: .zero); self.title = title; self.target = target; self.action = action
@@ -359,8 +359,8 @@ private final class HoverButton: NSButton {
         let area = NSTrackingArea(rect: self.bounds, options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect], owner: self, userInfo: nil)
         self.addTrackingArea(area); self.trackingAreaReference = area
     }
-    override func mouseEntered(with event: NSEvent) { self.animateSurface(alpha: 0.92, scale: 1.008) }
-    override func mouseExited(with event: NSEvent) { self.animateSurface(alpha: 0.72, scale: 1) }
+    override func mouseEntered(with event: NSEvent) { self.animateSurface(alpha: 0.90, scale: 1.006) }
+    override func mouseExited(with event: NSEvent) { self.animateSurface(alpha: 0.58, scale: 1) }
     override func mouseDown(with event: NSEvent) {
         self.animateSurface(alpha: 1, scale: 0.992, duration: 0.08)
         super.mouseDown(with: event)
