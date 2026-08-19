@@ -2,6 +2,14 @@
 
 All notable changes to Codex Duo are documented here.
 
+## 0.6.0 - 2026-08-18
+
+- Made each non-active account row the direct account-switch action.
+- Removed the separate switch button and ignored clicks on the active account.
+- Added subtle row hover, press, and committed-selection animations.
+- Expanded the account model and menu to support up to 10 accounts.
+- Kept the menu-bar summary compact when more than two accounts are configured.
+
 ## 0.5.1 - 2026-08-18
 
 - Rebalanced the outer shell, account card, and switch-action corner radii.

@@ -11,6 +11,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var isSwitching = false
     private var lastError: String?
 
+    private var previewAccountCount: Int? {
+        ProcessInfo.processInfo.environment["CODEX_DUO_PREVIEW_ACCOUNTS"].flatMap(Int.init)
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         var forcedAppearance: NSAppearance?
         if let previewAppearance = ProcessInfo.processInfo.environment["CODEX_DUO_APPEARANCE"] {
@@ -53,6 +57,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     private func reloadRegistry() {
+        if let previewAccountCount {
+            self.registry = CodexRegistry.preview(accountCount: previewAccountCount)
+            self.lastError = nil
+            self.updateStatusItem()
+            return
+        }
         do {
             self.registry = try self.service.loadRegistry()
             if !self.isSwitching { self.lastError = nil }
@@ -67,7 +77,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         guard let button = self.statusItem.button else { return }
         if self.isSwitching {
             button.title = "Switching…"
-            button.toolTip = "Restarting Codex with the other account"
+            button.toolTip = "Restarting Codex with the selected account"
             return
         }
         guard let registry = self.registry, !registry.accounts.isEmpty else {
@@ -76,14 +86,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             return
         }
 
-        let parts = registry.accounts.prefix(2).map { account in
-            let remaining = account.lastUsage?.weekly?.remainingPercent()
-                ?? account.lastUsage?.fiveHour?.remainingPercent()
-            return "\(account.compactName) \(remaining.map(String.init) ?? "—")%"
+        let accounts = registry.menuAccounts
+        if accounts.count <= 2 {
+            button.title = accounts.map(self.statusSummary).joined(separator: " · ")
+        } else if let active = registry.activeAccount ?? accounts.first {
+            button.title = "\(self.statusSummary(active)) · +\(accounts.count - 1)"
         }
-        button.title = parts.joined(separator: " · ")
         button.font = codexDuoRoundedFont(ofSize: NSFont.systemFontSize, weight: .semibold)
-        button.toolTip = registry.accounts.map { account in
+        button.toolTip = accounts.map { account in
             let active = account.accountKey == registry.activeAccountKey ? "Active — " : ""
             return "\(active)\(account.displayName): \(self.quotaSummary(account))"
         }.joined(separator: "\n")
@@ -93,19 +103,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.removeAllItems()
 
         let accountsItem = NSMenuItem()
-        accountsItem.isEnabled = false
         accountsItem.view = AccountOverviewView(
             registry: self.registry,
-            errorMessage: self.lastError)
-        menu.addItem(accountsItem)
-
-        let switchItem = NSMenuItem()
-        switchItem.view = SwitchActionView(
-            destination: self.registry?.otherAccount()?.displayName,
             isWorking: self.isSwitching,
+            errorMessage: self.lastError,
             target: self,
-            action: #selector(self.switchToOtherAccount(_:)))
-        menu.addItem(switchItem)
+            action: #selector(self.switchToAccount(_:)))
+        menu.addItem(accountsItem)
+    }
+
+    private func statusSummary(_ account: CodexAccount) -> String {
+        let remaining = account.lastUsage?.weekly?.remainingPercent()
+            ?? account.lastUsage?.fiveHour?.remainingPercent()
+        return "\(account.compactName) \(remaining.map(String.init) ?? "—")%"
     }
 
     private func quotaSummary(_ account: CodexAccount) -> String {
@@ -126,35 +136,44 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         return "\(remaining)%"
     }
 
-    @objc private func switchToOtherAccount(_ sender: Any?) {
+    @objc private func switchToAccount(_ sender: Any?) {
         guard !self.isSwitching,
+              let row = sender as? AccountRowButton,
               let registry = self.registry,
-              let target = registry.otherAccount()
+              let target = registry.switchTarget(accountKey: row.accountKey)
         else { return }
 
-        self.statusItem.menu?.cancelTracking()
         self.isSwitching = true
         self.lastError = nil
         self.updateStatusItem()
 
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+        row.playSelectionAnimation { [weak self] in
             guard let self else { return }
-            let result = self.service.switchAccountAndRestartCodex(
-                selector: target.email,
-                expectedAccountKey: target.accountKey)
-            DispatchQueue.main.async {
+            self.statusItem.menu?.cancelTracking()
+            if self.previewAccountCount != nil {
                 self.isSwitching = false
-                self.lastError = result.succeeded ? nil : self.errorMessage(result)
-                self.reloadRegistry()
-                if !result.succeeded {
-                    self.showSwitchFailure(self.lastError ?? "The account switch failed.")
+                self.updateStatusItem()
+                return
+            }
+            DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+                guard let self else { return }
+                let result = self.service.switchAccountAndRestartCodex(
+                    selector: target.email,
+                    expectedAccountKey: target.accountKey)
+                DispatchQueue.main.async {
+                    self.isSwitching = false
+                    self.lastError = result.succeeded ? nil : self.errorMessage(result)
+                    self.reloadRegistry()
+                    if !result.succeeded {
+                        self.showSwitchFailure(self.lastError ?? "The account switch failed.")
+                    }
                 }
             }
         }
     }
 
     private func refreshUsage() {
-        guard !self.isRefreshing, !self.isSwitching else { return }
+        guard self.previewAccountCount == nil, !self.isRefreshing, !self.isSwitching else { return }
         self.isRefreshing = true
         DispatchQueue.global(qos: .utility).async { [weak self] in
             guard let self else { return }

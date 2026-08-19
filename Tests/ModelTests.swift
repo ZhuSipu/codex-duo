@@ -42,7 +42,28 @@ enum ModelTests {
         precondition(registry.accounts[0].lastUsage?.weekly?.remainingPercent() == 40)
         precondition(registry.accounts[1].lastUsage?.fiveHour == nil)
         precondition(registry.accounts[1].lastUsage?.weekly?.remainingPercent() == 90)
-        precondition(registry.otherAccount()?.accountKey == "account-b")
+        precondition(registry.activeAccount?.accountKey == "account-a")
+        precondition(registry.switchTarget(accountKey: "account-a") == nil)
+        precondition(registry.switchTarget(accountKey: "account-b")?.email == "second@example.com")
+
+        let manyAccountObjects = (0..<12).map { index in
+            """
+            {"account_key":"account-\(index)","email":"user\(index)@example.com","alias":null,"plan":"plus","last_usage_at":null,"last_usage":null}
+            """
+        }.joined(separator: ",")
+        let manyFixture = """
+        {"schema_version":4,"active_account_key":"account-11","accounts":[\(manyAccountObjects)]}
+        """
+        let manyRegistry = try JSONDecoder().decode(CodexRegistry.self, from: Data(manyFixture.utf8))
+        precondition(manyRegistry.accounts.count == 12)
+        precondition(manyRegistry.menuAccounts.count == 10)
+        precondition(manyRegistry.menuAccounts.last?.accountKey == "account-11")
+        precondition(manyRegistry.switchTarget(accountKey: "account-10") == nil)
+        precondition(manyRegistry.switchTarget(accountKey: "account-8")?.email == "user8@example.com")
+        precondition(manyRegistry.switchTarget(accountKey: "account-11") == nil)
+        precondition(CodexRegistry.preview(accountCount: 0).menuAccounts.count == 1)
+        precondition(CodexRegistry.preview(accountCount: 10).menuAccounts.count == 10)
+        precondition(CodexRegistry.preview(accountCount: 11).menuAccounts.count == 10)
 
         let testNow = Date(timeIntervalSince1970: 100_000)
         let countdown = RateLimitWindow(

@@ -1,6 +1,8 @@
 import Foundation
 
 struct CodexRegistry: Decodable {
+    static let maximumSupportedAccounts = 10
+
     let schemaVersion: Int
     let activeAccountKey: String?
     let accounts: [CodexAccount]
@@ -11,9 +13,49 @@ struct CodexRegistry: Decodable {
         case accounts
     }
 
-    func otherAccount() -> CodexAccount? {
-        guard self.accounts.count == 2 else { return nil }
-        return self.accounts.first { $0.accountKey != self.activeAccountKey }
+    var menuAccounts: [CodexAccount] {
+        guard self.accounts.count > Self.maximumSupportedAccounts else { return self.accounts }
+        var result = Array(self.accounts.prefix(Self.maximumSupportedAccounts))
+        if let activeAccountKey,
+           !result.contains(where: { $0.accountKey == activeAccountKey }),
+           let active = self.accounts.first(where: { $0.accountKey == activeAccountKey })
+        {
+            result[result.count - 1] = active
+        }
+        return result
+    }
+
+    var activeAccount: CodexAccount? {
+        guard let activeAccountKey else { return nil }
+        return self.accounts.first { $0.accountKey == activeAccountKey }
+    }
+
+    func switchTarget(accountKey: String) -> CodexAccount? {
+        guard accountKey != self.activeAccountKey else { return nil }
+        return self.menuAccounts.first { $0.accountKey == accountKey }
+    }
+
+    static func preview(accountCount: Int) -> CodexRegistry {
+        let count = max(1, min(Self.maximumSupportedAccounts, accountCount))
+        let accounts = (0..<count).map { index in
+            let used = Double((index * 13 + 17) % 92)
+            return CodexAccount(
+                accountKey: "preview-\(index)",
+                email: "account\(index + 1)@example.com",
+                alias: nil,
+                plan: "plus",
+                lastUsage: UsageSnapshot(
+                    primary: RateLimitWindow(
+                        usedPercent: used,
+                        windowMinutes: 10_080,
+                        resetsAt: Date().addingTimeInterval(Double(index + 1) * 43_200).timeIntervalSince1970),
+                    secondary: nil),
+                lastUsageAt: nil)
+        }
+        return CodexRegistry(
+            schemaVersion: 4,
+            activeAccountKey: accounts[min(1, accounts.count - 1)].accountKey,
+            accounts: accounts)
     }
 }
 

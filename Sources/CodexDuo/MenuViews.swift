@@ -65,8 +65,8 @@ private final class GlassSurfaceView: NSVisualEffectView {
 }
 
 final class AccountOverviewView: NSView {
-    init(registry: CodexRegistry?, errorMessage: String?) {
-        let accountCount = max(1, registry?.accounts.count ?? 0)
+    init(registry: CodexRegistry?, isWorking: Bool, errorMessage: String?, target: AnyObject, action: Selector) {
+        let accountCount = max(1, registry?.menuAccounts.count ?? 0)
         super.init(frame: NSRect(x: 0, y: 0, width: panelWidth, height: CGFloat(16 + accountCount * 62)))
 
         let card = GlassSurfaceView(role: .card, cornerRadius: 11.5)
@@ -80,15 +80,21 @@ final class AccountOverviewView: NSView {
         rows.translatesAutoresizingMaskIntoConstraints = false
         card.addSubview(rows)
 
-        if let registry, !registry.accounts.isEmpty {
-            for (index, account) in registry.accounts.enumerated() {
+        if let registry, !registry.menuAccounts.isEmpty {
+            for (index, account) in registry.menuAccounts.enumerated() {
                 if index > 0 {
                     let divider = HairlineView()
                     rows.addArrangedSubview(divider)
                     divider.widthAnchor.constraint(equalToConstant: panelWidth - 52).isActive = true
                     divider.heightAnchor.constraint(equalToConstant: 0.5).isActive = true
                 }
-                let row = AccountRowView(account: account, active: account.accountKey == registry.activeAccountKey)
+                let active = account.accountKey == registry.activeAccountKey
+                let row = AccountRowButton(
+                    account: account,
+                    active: active,
+                    canSwitch: !active && !isWorking,
+                    target: target,
+                    action: action)
                 rows.addArrangedSubview(row)
                 row.widthAnchor.constraint(equalToConstant: panelWidth - 48).isActive = true
                 row.heightAnchor.constraint(equalToConstant: 61.5).isActive = true
@@ -128,9 +134,34 @@ private final class HairlineView: NSView {
     @available(*, unavailable) required init?(coder: NSCoder) { nil }
 }
 
-private final class AccountRowView: NSView {
-    init(account: CodexAccount, active: Bool) {
+final class AccountRowButton: NSButton {
+    let accountKey: String
+    private let canSwitch: Bool
+    private let hoverLayer = CALayer()
+    private var trackingAreaReference: NSTrackingArea?
+    private var isCommitting = false
+
+    init(account: CodexAccount, active: Bool, canSwitch: Bool, target: AnyObject, action: Selector) {
+        self.accountKey = account.accountKey
+        self.canSwitch = canSwitch
         super.init(frame: .zero)
+        self.isBordered = false
+        self.title = ""
+        self.focusRingType = .none
+        self.wantsLayer = true
+        self.layer?.cornerRadius = 8
+        self.layer?.cornerCurve = .continuous
+        self.hoverLayer.cornerRadius = 8
+        self.hoverLayer.opacity = 0
+        self.layer?.insertSublayer(self.hoverLayer, at: 0)
+        if canSwitch {
+            self.target = target
+            self.action = action
+            self.toolTip = "Switch to \(account.displayName)"
+        } else if active {
+            self.toolTip = "Current account"
+        }
+
         let marker = ActiveMarkerView(active: active)
         marker.translatesAutoresizingMaskIntoConstraints = false
         addSubview(marker)
@@ -143,7 +174,17 @@ private final class AccountRowView: NSView {
 
         let plan = PlanBadgeView(text: (account.plan ?? "Unknown").capitalized)
         plan.setContentHuggingPriority(.required, for: .horizontal)
-        let identityRow = NSStackView(views: [identity, plan])
+        let identitySpacer = NSView()
+        identitySpacer.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        var identityViews: [NSView] = [identity, plan, identitySpacer]
+        if canSwitch {
+            let chevron = NSImageView(image: NSImage(systemSymbolName: "chevron.right", accessibilityDescription: "Switch") ?? NSImage())
+            chevron.contentTintColor = .quaternaryLabelColor
+            chevron.symbolConfiguration = NSImage.SymbolConfiguration(pointSize: 8, weight: .semibold)
+            chevron.setContentHuggingPriority(.required, for: .horizontal)
+            identityViews.append(chevron)
+        }
+        let identityRow = NSStackView(views: identityViews)
         identityRow.orientation = .horizontal
         identityRow.alignment = .centerY
         identityRow.spacing = 7
@@ -177,7 +218,78 @@ private final class AccountRowView: NSView {
             meters.widthAnchor.constraint(equalTo: content.widthAnchor),
             meters.heightAnchor.constraint(equalToConstant: 23),
         ])
+        self.updateHoverColor()
     }
+
+    override func layout() {
+        super.layout()
+        self.hoverLayer.frame = self.bounds
+    }
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        if let trackingAreaReference { self.removeTrackingArea(trackingAreaReference) }
+        guard self.canSwitch else { return }
+        let area = NSTrackingArea(
+            rect: self.bounds,
+            options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect],
+            owner: self,
+            userInfo: nil)
+        self.addTrackingArea(area)
+        self.trackingAreaReference = area
+    }
+
+    override func resetCursorRects() {
+        super.resetCursorRects()
+        if self.canSwitch { self.addCursorRect(self.bounds, cursor: .pointingHand) }
+    }
+
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        self.updateHoverColor()
+    }
+
+    override func mouseEntered(with event: NSEvent) {
+        guard self.canSwitch, !self.isCommitting else { return }
+        self.animate(alpha: 0.75, scale: 1, duration: 0.16)
+    }
+
+    override func mouseExited(with event: NSEvent) {
+        guard self.canSwitch, !self.isCommitting else { return }
+        self.animate(alpha: 0, scale: 1, duration: 0.16)
+    }
+
+    override func mouseDown(with event: NSEvent) {
+        guard self.canSwitch else { return }
+        self.animate(alpha: 1, scale: 0.992, duration: 0.08)
+        super.mouseDown(with: event)
+        if !self.isCommitting { self.animate(alpha: 0.75, scale: 1, duration: 0.12) }
+    }
+
+    func playSelectionAnimation(completion: @escaping () -> Void) {
+        guard self.canSwitch else { return }
+        self.isCommitting = true
+        self.animate(alpha: 1, scale: 0.985, duration: 0.12)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.14) { [weak self] in
+            self?.animate(alpha: 0, scale: 1, duration: 0.14)
+            completion()
+        }
+    }
+
+    private func updateHoverColor() {
+        let dark = self.effectiveAppearance.codexDuoIsDark
+        self.hoverLayer.backgroundColor = NSColor.labelColor.withAlphaComponent(dark ? 0.075 : 0.055).cgColor
+    }
+
+    private func animate(alpha: Float, scale: CGFloat, duration: CFTimeInterval) {
+        CATransaction.begin()
+        CATransaction.setAnimationDuration(duration)
+        CATransaction.setAnimationTimingFunction(CAMediaTimingFunction(name: .easeOut))
+        self.hoverLayer.opacity = alpha
+        self.layer?.setAffineTransform(CGAffineTransform(scaleX: scale, y: scale))
+        CATransaction.commit()
+    }
+
     @available(*, unavailable) required init?(coder: NSCoder) { nil }
 }
 
@@ -302,77 +414,6 @@ private final class MeterTrackView: NSView {
         self.layer?.backgroundColor = NSColor.labelColor.withAlphaComponent(dark ? 0.10 : 0.055).cgColor
         let low = (self.remaining ?? 100) < 40
         self.fill.backgroundColor = NSColor.labelColor.withAlphaComponent(low ? (dark ? 0.54 : 0.42) : (dark ? 0.34 : 0.25)).cgColor
-    }
-    @available(*, unavailable) required init?(coder: NSCoder) { nil }
-}
-
-final class SwitchActionView: NSView {
-    init(destination: String?, isWorking: Bool, target: AnyObject, action: Selector) {
-        super.init(frame: NSRect(x: 0, y: 0, width: panelWidth, height: 35))
-        let title: String
-        if isWorking { title = "Switching…" }
-        else if let destination {
-            let compact = destination.split(separator: "@", maxSplits: 1).first.map(String.init) ?? destination
-            title = "Switch account   \(compact)"
-        } else { title = "Switch Account" }
-
-        let button = HoverButton(title: title, target: target, action: action)
-        button.isBordered = false
-        button.bezelStyle = .regularSquare
-        button.font = NSFont.systemFont(ofSize: 10.5, weight: .medium)
-        button.contentTintColor = .labelColor
-        button.image = NSImage(systemSymbolName: "arrow.left.arrow.right", accessibilityDescription: "Switch account")
-        button.imagePosition = .imageLeading
-        button.imageHugsTitle = true
-        button.imageScaling = .scaleProportionallyDown
-        button.isEnabled = destination != nil && !isWorking
-        button.translatesAutoresizingMaskIntoConstraints = false
-        addSubview(button)
-        NSLayoutConstraint.activate([
-            button.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 12), button.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -12),
-            button.topAnchor.constraint(equalTo: topAnchor, constant: 1), button.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -6),
-        ])
-    }
-    @available(*, unavailable) required init?(coder: NSCoder) { nil }
-}
-
-private final class HoverButton: NSButton {
-    private var trackingAreaReference: NSTrackingArea?
-    private let surface = GlassSurfaceView(role: .action, cornerRadius: 8)
-    override init(frame frameRect: NSRect) {
-        super.init(frame: frameRect)
-        self.wantsLayer = true
-        self.surface.translatesAutoresizingMaskIntoConstraints = false
-        self.addSubview(self.surface, positioned: .below, relativeTo: nil)
-        NSLayoutConstraint.activate([
-            self.surface.leadingAnchor.constraint(equalTo: self.leadingAnchor), self.surface.trailingAnchor.constraint(equalTo: self.trailingAnchor),
-            self.surface.topAnchor.constraint(equalTo: self.topAnchor), self.surface.bottomAnchor.constraint(equalTo: self.bottomAnchor),
-        ])
-        self.surface.layer?.opacity = 0.58
-    }
-    convenience init(title: String, target: AnyObject?, action: Selector?) {
-        self.init(frame: .zero); self.title = title; self.target = target; self.action = action
-    }
-    override func updateTrackingAreas() {
-        super.updateTrackingAreas()
-        if let trackingAreaReference { self.removeTrackingArea(trackingAreaReference) }
-        let area = NSTrackingArea(rect: self.bounds, options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect], owner: self, userInfo: nil)
-        self.addTrackingArea(area); self.trackingAreaReference = area
-    }
-    override func mouseEntered(with event: NSEvent) { self.animateSurface(alpha: 0.90, scale: 1.006) }
-    override func mouseExited(with event: NSEvent) { self.animateSurface(alpha: 0.58, scale: 1) }
-    override func mouseDown(with event: NSEvent) {
-        self.animateSurface(alpha: 1, scale: 0.992, duration: 0.08)
-        super.mouseDown(with: event)
-        self.animateSurface(alpha: 0.92, scale: 1, duration: 0.12)
-    }
-    private func animateSurface(alpha: CGFloat, scale: CGFloat, duration: CFTimeInterval = 0.16) {
-        CATransaction.begin()
-        CATransaction.setAnimationDuration(duration)
-        CATransaction.setAnimationTimingFunction(CAMediaTimingFunction(name: .easeOut))
-        self.surface.layer?.opacity = Float(alpha)
-        self.surface.layer?.setAffineTransform(CGAffineTransform(scaleX: scale, y: scale))
-        CATransaction.commit()
     }
     @available(*, unavailable) required init?(coder: NSCoder) { nil }
 }
