@@ -202,7 +202,8 @@ final class AccountRowButton: NSButton {
     override func mouseEntered(with event: NSEvent) {
         guard self.canSwitch, !self.isCommitting else { return }
         self.updateRefraction(with: event)
-        self.animateMaterial(base: 0.58, highlight: 0.52, scale: 1, duration: 0.16)
+        let dark = self.effectiveAppearance.codexDuoIsDark
+        self.animateMaterial(base: dark ? 0.58 : 0.72, highlight: dark ? 0.52 : 0.62, scale: 1, duration: 0.16)
     }
 
     override func mouseMoved(with event: NSEvent) {
@@ -235,7 +236,9 @@ final class AccountRowButton: NSButton {
 
     private func updateHoverColor() {
         let dark = self.effectiveAppearance.codexDuoIsDark
-        self.hoverLayer.backgroundColor = NSColor.labelColor.withAlphaComponent(dark ? 0.055 : 0.04).cgColor
+        self.hoverLayer.backgroundColor = NSColor.labelColor.withAlphaComponent(dark ? 0.055 : 0.075).cgColor
+        self.hoverLayer.borderWidth = 0.5
+        self.hoverLayer.borderColor = NSColor.labelColor.withAlphaComponent(dark ? 0.07 : 0.13).cgColor
         self.refractionLayer.colors = [
             NSColor.white.withAlphaComponent(dark ? 0.11 : 0.32).cgColor,
             NSColor.white.withAlphaComponent(0).cgColor,
@@ -403,4 +406,59 @@ private final class MeterTrackView: NSView {
         self.fill.backgroundColor = NSColor.labelColor.withAlphaComponent(low ? (dark ? 0.54 : 0.42) : (dark ? 0.34 : 0.25)).cgColor
     }
     @available(*, unavailable) required init?(coder: NSCoder) { nil }
+}
+
+final class MenuFooterView: NSView {
+    init(target: AnyObject, settingsAction: Selector, quitAction: Selector) {
+        super.init(frame: NSRect(x: 0, y: 0, width: panelWidth, height: 34))
+
+        let separator = HairlineView()
+        separator.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(separator)
+
+        let settings = self.button(
+            title: "Settings…",
+            symbol: "gearshape",
+            target: target,
+            action: settingsAction)
+        let quit = self.button(
+            title: "Quit",
+            symbol: "power",
+            target: target,
+            action: quitAction)
+        let spacer = NSView()
+        let actions = NSStackView(views: [settings, spacer, quit])
+        actions.orientation = .horizontal
+        actions.alignment = .centerY
+        actions.distribution = .fill
+        actions.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(actions)
+
+        NSLayoutConstraint.activate([
+            separator.topAnchor.constraint(equalTo: topAnchor),
+            separator.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 24),
+            separator.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -24),
+            separator.heightAnchor.constraint(equalToConstant: 0.5),
+            actions.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 14),
+            actions.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -14),
+            actions.topAnchor.constraint(equalTo: separator.bottomAnchor, constant: 3),
+            actions.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -3),
+        ])
+    }
+
+    private func button(title: String, symbol: String, target: AnyObject, action: Selector) -> NSButton {
+        let button = NSButton(title: title, target: target, action: action)
+        button.isBordered = false
+        button.font = NSFont.systemFont(ofSize: 10.5, weight: .medium)
+        button.contentTintColor = .secondaryLabelColor
+        button.image = NSImage(systemSymbolName: symbol, accessibilityDescription: title)
+        button.imagePosition = .imageLeading
+        button.imageHugsTitle = true
+        button.imageScaling = .scaleProportionallyDown
+        button.focusRingType = .none
+        return button
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { nil }
 }

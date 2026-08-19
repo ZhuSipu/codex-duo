@@ -3,6 +3,7 @@ import Foundation
 
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private let service = CodexAuthService.shared
+    private let preferences = AppPreferences.shared
     private var statusItem: NSStatusItem!
     private var registry: CodexRegistry?
     private var refreshTimer: Timer?
@@ -10,23 +11,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var isRefreshing = false
     private var isSwitching = false
     private var lastError: String?
+    private var previewAppearance: NSAppearance?
+    private lazy var settingsController = SettingsWindowController(
+        preferences: self.preferences,
+        service: self.service,
+        registryProvider: { [weak self] in self?.registry },
+        onAccountsChanged: { [weak self] in self?.reloadRegistry() },
+        onRefreshRequested: { [weak self] in self?.refreshUsage(force: true) })
 
     private var previewAccountCount: Int? {
         ProcessInfo.processInfo.environment["CODEX_DUO_PREVIEW_ACCOUNTS"].flatMap(Int.init)
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        var forcedAppearance: NSAppearance?
         if let previewAppearance = ProcessInfo.processInfo.environment["CODEX_DUO_APPEARANCE"] {
-            forcedAppearance = NSAppearance(named: previewAppearance == "dark" ? .darkAqua : .aqua)
-            NSApp.appearance = forcedAppearance
+            self.previewAppearance = NSAppearance(named: previewAppearance == "dark" ? .darkAqua : .aqua)
         }
+        self.applyAppearance()
 
         self.statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         self.statusItem.button?.image = nil
 
         let menu = NSMenu()
-        menu.appearance = forcedAppearance
+        menu.appearance = self.effectiveAppearance
         menu.delegate = self
         self.statusItem.menu = menu
 
@@ -34,14 +41,33 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         self.registryTimer = Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] _ in
             self?.reloadRegistry()
         }
-        self.refreshTimer = Timer.scheduledTimer(withTimeInterval: 120, repeats: true) { [weak self] _ in
-            self?.refreshUsage()
-        }
-        self.refreshUsage()
+        self.scheduleRefreshTimer()
+        if self.preferences.refreshInterval != .off { self.refreshUsage() }
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(self.preferencesDidChange(_:)),
+            name: .codexDuoPreferencesDidChange,
+            object: nil)
 
-        if ProcessInfo.processInfo.environment["CODEX_DUO_PREVIEW"] == "1" {
+        if (self.registry?.accounts.isEmpty ?? true), !self.preferences.didPresentSetup,
+           ProcessInfo.processInfo.environment["CODEX_DUO_PREVIEW"] != "1"
+        {
+            self.preferences.didPresentSetup = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in
+                self?.showSettings(nil)
+            }
+        }
+
+        if ProcessInfo.processInfo.environment["CODEX_DUO_PREVIEW"] == "1",
+           ProcessInfo.processInfo.environment["CODEX_DUO_SHOW_SETTINGS"] != "1"
+        {
             DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in
                 self?.statusItem.button?.performClick(nil)
+            }
+        }
+        if ProcessInfo.processInfo.environment["CODEX_DUO_SHOW_SETTINGS"] == "1" {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in
+                self?.showSettings(nil)
             }
         }
     }
@@ -49,6 +75,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     func applicationWillTerminate(_ notification: Notification) {
         self.refreshTimer?.invalidate()
         self.registryTimer?.invalidate()
+        NotificationCenter.default.removeObserver(self)
     }
 
     func menuNeedsUpdate(_ menu: NSMenu) {
@@ -68,6 +95,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             if !self.isSwitching { self.lastError = nil }
             self.updateStatusItem()
         } catch {
+            self.registry = nil
             self.lastError = error.localizedDescription
             self.updateStatusItem()
         }
@@ -110,6 +138,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             target: self,
             action: #selector(self.switchToAccount(_:)))
         menu.addItem(accountsItem)
+
+        let footerItem = NSMenuItem()
+        footerItem.view = MenuFooterView(
+            target: self,
+            settingsAction: #selector(self.showSettings(_:)),
+            quitAction: #selector(self.quitApplication(_:)))
+        menu.addItem(footerItem)
     }
 
     private func statusSummary(_ account: CodexAccount) -> String {
@@ -172,8 +207,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
     }
 
-    private func refreshUsage() {
-        guard self.previewAccountCount == nil, !self.isRefreshing, !self.isSwitching else { return }
+    private func refreshUsage(force: Bool = false) {
+        guard self.previewAccountCount == nil, !self.isRefreshing, !self.isSwitching,
+              force || self.preferences.refreshInterval != .off
+        else { return }
         self.isRefreshing = true
         DispatchQueue.global(qos: .utility).async { [weak self] in
             guard let self else { return }
@@ -184,6 +221,40 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 self.reloadRegistry()
             }
         }
+    }
+
+    private var effectiveAppearance: NSAppearance? {
+        self.previewAppearance ?? self.preferences.appearanceMode.appearance
+    }
+
+    private func applyAppearance() {
+        NSApp.appearance = self.effectiveAppearance
+        self.statusItem?.menu?.appearance = self.effectiveAppearance
+    }
+
+    private func scheduleRefreshTimer() {
+        self.refreshTimer?.invalidate()
+        self.refreshTimer = nil
+        let interval = self.preferences.refreshInterval.rawValue
+        guard interval > 0 else { return }
+        self.refreshTimer = Timer.scheduledTimer(withTimeInterval: TimeInterval(interval), repeats: true) { [weak self] _ in
+            self?.refreshUsage()
+        }
+    }
+
+    @objc private func preferencesDidChange(_ notification: Notification) {
+        self.applyAppearance()
+        self.scheduleRefreshTimer()
+        self.statusItem.menu?.cancelTracking()
+    }
+
+    @objc private func showSettings(_ sender: Any?) {
+        self.statusItem.menu?.cancelTracking()
+        self.settingsController.showWindow(sender)
+    }
+
+    @objc private func quitApplication(_ sender: Any?) {
+        NSApp.terminate(sender)
     }
 
     private func showSwitchFailure(_ message: String) {

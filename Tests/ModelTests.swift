@@ -65,6 +65,17 @@ enum ModelTests {
         precondition(CodexRegistry.preview(accountCount: 10).menuAccounts.count == 10)
         precondition(CodexRegistry.preview(accountCount: 11).menuAccounts.count == 10)
 
+        let preferenceSuite = "CodexDuoTests.\(UUID().uuidString)"
+        guard let testDefaults = UserDefaults(suiteName: preferenceSuite) else { fatalError("Unable to create test defaults") }
+        defer { testDefaults.removePersistentDomain(forName: preferenceSuite) }
+        let preferences = AppPreferences(defaults: testDefaults)
+        precondition(preferences.appearanceMode == .system)
+        precondition(preferences.refreshInterval == .twoMinutes)
+        preferences.appearanceMode = .dark
+        preferences.refreshInterval = .off
+        precondition(preferences.appearanceMode == .dark)
+        precondition(preferences.refreshInterval == .off)
+
         let testNow = Date(timeIntervalSince1970: 100_000)
         let countdown = RateLimitWindow(
             usedPercent: 20,

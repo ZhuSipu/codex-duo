@@ -19,6 +19,15 @@ final class CodexAuthService {
             .appendingPathComponent(".codex/accounts/registry.json", isDirectory: false)
     }
 
+    var isAvailable: Bool { self.executableURL() != nil }
+
+    var versionText: String? {
+        guard let executableURL = self.executableURL() else { return nil }
+        let result = self.runExecutable(path: executableURL.path, arguments: ["--version"])
+        guard result.succeeded else { return nil }
+        return result.stdout.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
     func loadRegistry() throws -> CodexRegistry {
         let data = try Data(contentsOf: self.registryURL)
         return try JSONDecoder().decode(CodexRegistry.self, from: data)
@@ -26,6 +35,29 @@ final class CodexAuthService {
 
     func refreshUsage() -> CommandResult {
         self.runCodexAuth(arguments: ["list"])
+    }
+
+    func setAlias(account: String, alias: String?) -> CommandResult {
+        if let alias, !alias.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return self.runCodexAuth(arguments: ["alias", "set", account, alias])
+        }
+        return self.runCodexAuth(arguments: ["alias", "clear", account])
+    }
+
+    func removeAccount(_ account: String) -> CommandResult {
+        self.runCodexAuth(arguments: ["remove", account, "--skip-api"])
+    }
+
+    func openLoginInTerminal() -> CommandResult {
+        guard let executableURL = self.executableURL() else {
+            return CommandResult(status: 127, stdout: "", stderr: "codex-auth was not found.")
+        }
+        let command = "\(self.shellQuote(executableURL.path)) login"
+        let escaped = command
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "\"", with: "\\\"")
+        let appleScript = "tell application \"Terminal\" to do script \"\(escaped)\"\ntell application \"Terminal\" to activate"
+        return self.runExecutable(path: "/usr/bin/osascript", arguments: ["-e", appleScript])
     }
 
     func switchAccountAndRestartCodex(selector: String, expectedAccountKey: String) -> CommandResult {
@@ -131,5 +163,9 @@ final class CodexAuthService {
         } catch {
             return CommandResult(status: 126, stdout: "", stderr: error.localizedDescription)
         }
+    }
+
+    private func shellQuote(_ value: String) -> String {
+        "'\(value.replacingOccurrences(of: "'", with: "'\\''"))'"
     }
 }

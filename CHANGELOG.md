@@ -2,6 +2,17 @@
 
 All notable changes to Codex Duo are documented here.
 
+## 0.7.0 - 2026-08-19
+
+- Added a native settings window for appearance, refresh interval, startup, and account management.
+- Added direct Add, Rename, Remove, and Refresh account workflows without exposing credentials.
+- Added compact Settings and Quit actions to the menu footer.
+- Added System, Light, and Dark appearance persistence and configurable 0–15 minute refresh intervals.
+- Improved light-mode hover contrast with a restrained material edge and reflection.
+- Added launch-at-login support through the macOS Service Management framework.
+- Added first-run setup guidance for missing dependencies or accounts.
+- Added DMG packaging plus optional Developer ID signing and notarization hooks.
+
 ## 0.6.1 - 2026-08-18
 
 - Removed the redundant inner account card so the native menu is the only persistent glass container.

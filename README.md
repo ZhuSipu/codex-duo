@@ -2,39 +2,57 @@
 
 Codex Duo is a compact native macOS menu-bar app for monitoring and switching between up to ten Codex accounts.
 
-It reads the account registry maintained by [`codex-auth`](https://github.com/Loongphy/codex-auth), displays the currently available usage windows, refreshes usage every two minutes, and provides one explicit action for switching to the other account and restarting the official Codex App.
+It reads the account registry maintained by [`codex-auth`](https://github.com/Loongphy/codex-auth), displays available usage windows, and switches the official Codex App by selecting an account row. Appearance, refresh frequency, startup, and accounts are managed from a native settings window.
 
 ## Features
 
 - Native AppKit menu-bar interface with a compact, adaptive Liquid Glass design.
 - System-aware light and dark materials with restrained depth, highlights, and motion.
-- Weekly remaining quota for both accounts in the menu-bar title.
+- Compact weekly quota summary for the active account, with support for up to ten accounts.
 - Adaptive usage meters: only windows reported by `codex-auth` are shown.
 - Automatic 5-hour/weekly two-column layout if the 300-minute window returns in the future.
 - Reset countdowns with day, hour, and minute precision.
 - Direct account-row switching followed by a verified Codex App restart.
+- Native account setup for adding, renaming, removing, and refreshing up to ten accounts.
+- System, Light, and Dark appearance modes with improved light-mode hover feedback.
+- Configurable automatic refresh: Off, 1, 2, 5, 10, or 15 minutes.
+- Optional launch at login and explicit Settings and Quit actions.
 - No bundled credentials, account snapshots, analytics, or network client.
 
 ## Requirements
 
 - macOS 14 or later.
 - Apple Silicon Mac for the provided release build.
-- Swift 5.10 command-line tools when building from source.
+- Swift 5.10 command-line tools only when building from source.
 - The official Codex App.
 - [`codex-auth`](https://github.com/Loongphy/codex-auth) with one to ten configured accounts.
 
-Install the current `codex-auth` prerelease used by this project:
+Codex Duo detects a missing dependency and exposes the install command in Settings. To install it manually:
 
 ```shell
 npm install -g @loongphy/codex-auth@next
-codex-auth login
-# Repeat login for each additional account (up to ten).
-codex-auth list
 ```
 
 Codex Duo looks for `codex-auth` in `~/.local/bin`, `/opt/homebrew/bin`, and `/usr/local/bin`.
 
-## Install
+## Download and install
+
+Download the DMG from the latest GitHub release, open it, and drag **Codex Duo** to **Applications**. A ZIP is also provided for automated or manual installation.
+
+The current personal build is ad-hoc signed, not Apple-notarized. On first launch, macOS may require Control-clicking the app in Applications and choosing **Open**. Do not bypass Gatekeeper for unrelated software.
+
+On first launch with no configured accounts, Codex Duo opens Settings once. Use **Add Account…** to start the official Codex login flow in Terminal. Repeat for each account, then choose **Refresh Now**. Authentication remains owned by Codex and `codex-auth`; Codex Duo never asks for a password or displays a token.
+
+## Settings
+
+- **Appearance:** Follow System, Light, or Dark. Changes apply immediately.
+- **Automatic refresh:** Off or every 1, 2, 5, 10, or 15 minutes. Off keeps cached usage visible and disables API-backed refresh until Refresh Now is selected.
+- **Startup:** Register or unregister Codex Duo with macOS Login Items. The app must be in Applications.
+- **Accounts:** Add an account through Terminal, rename an alias, remove a selected account with confirmation, or refresh usage manually.
+
+Click a non-current account row in the menu to switch. Clicking the current account never invokes a switch. Do not switch while Codex is generating a response because switching intentionally quits and relaunches Codex.
+
+## Build from source
 
 From source:
 
@@ -45,8 +63,6 @@ cd codex-duo
 ```
 
 The installer builds, ad-hoc signs, copies the app to `/Applications/Codex Duo.app`, and launches it. Set `CODEX_DUO_INSTALL_DIR` to use a different destination directory.
-
-To install a packaged release, unzip it and move `Codex Duo.app` to `/Applications`.
 
 ## Build and test
 
@@ -62,13 +78,15 @@ Create a versioned release archive:
 ./Scripts/package_release.sh
 ```
 
-The archive is written to `dist/`. GitHub Actions runs the same tests and build on every push and pull request. Pushing a tag such as `v0.6.1` creates a GitHub release when the tag matches the version in `Resources/Info.plist`.
+The ZIP and DMG are written to `dist/`. GitHub Actions runs tests and builds on every push and pull request. Pushing a tag such as `v0.7.0` creates a release when the tag matches `Resources/Info.plist`.
+
+By default the app is ad-hoc signed. Release operators can set `CODEX_DUO_SIGN_IDENTITY` to a Developer ID Application identity. Set `CODEX_DUO_NOTARY_PROFILE` to an existing `notarytool` keychain profile to submit and staple the DMG.
 
 ## How it works
 
 Codex Duo reads only `~/.codex/accounts/registry.json`. It never opens the managed `*.auth.json` account snapshots. Account labels and cached usage are decoded locally.
 
-Every two minutes the app runs `codex-auth list`. Selecting a non-active account row:
+At the configured interval, the app runs `codex-auth list`. Selecting a non-active account row:
 
 1. quits the official Codex App;
 2. runs `codex-auth switch <account>`;
@@ -88,11 +106,20 @@ By default, `codex-auth list` may send the account access token to OpenAI endpoi
 - Up to ten accounts are shown; additional registry entries are omitted from the menu.
 - The registry schema and usage endpoint are controlled by `codex-auth` and may change.
 - Switching intentionally restarts the official Codex App.
+- The personal release is not currently Apple-notarized and does not include automatic updates.
 - The app is not affiliated with or endorsed by OpenAI.
+
+## Troubleshooting
+
+- **Menu shows —:** Open Settings and verify that `codex-auth` is installed and at least one account is configured.
+- **Add Account does not open:** Terminal automation may require permission in System Settings → Privacy & Security → Automation.
+- **Usage is stale:** Ensure refresh is not Off, then choose Refresh Now. Upstream API behavior may change.
+- **Switch interrupted work:** Reopen Codex and continue the task. Avoid switching during a streaming response.
+- **Login item fails:** Move Codex Duo to `/Applications`, launch it there, and retry the Startup checkbox.
 
 ## Uninstall
 
-Quit Codex Duo and move `/Applications/Codex Duo.app` to the Trash. Account data is owned by `codex-auth` and is not removed.
+Turn off **Open Codex Duo at login**, quit the app, and move `/Applications/Codex Duo.app` to the Trash. Account data is owned by `codex-auth` and is not removed. To remove `codex-auth` separately, use your npm installation method only after confirming no other workflow depends on it.
 
 ## License
 

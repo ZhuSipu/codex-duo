@@ -13,11 +13,14 @@ swiftc \
   -O \
   -framework AppKit \
   -framework Foundation \
+  -framework ServiceManagement \
   "$project_dir"/Sources/CodexDuo/*.swift \
   -o "$binary_dir/CodexDuo"
 
 mkdir -p "$app_dir/Contents"
 cp "$project_dir/Resources/Info.plist" "$app_dir/Contents/Info.plist"
-codesign --force --deep --sign - "$app_dir"
+xattr -cr "$app_dir"
+sign_identity="${CODEX_DUO_SIGN_IDENTITY:--}"
+codesign --force --deep --options runtime --sign "$sign_identity" "$app_dir"
 
 echo "$app_dir"
