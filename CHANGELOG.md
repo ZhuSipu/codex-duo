@@ -2,6 +2,14 @@
 
 All notable changes to Codex Duo are documented here.
 
+## 0.6.1 - 2026-08-18
+
+- Removed the redundant inner account card so the native menu is the only persistent glass container.
+- Reworked row hover into a subtle cursor-following reflection instead of a dark rectangular highlight.
+- Added spring-based press and selection feedback with restrained material transitions.
+- Removed account-row tooltips that could obscure neighboring usage details.
+- Tightened the panel width, row height, separators, and outer spacing.
+
 ## 0.6.0 - 2026-08-18
 
 - Made each non-active account row the direct account-switch action.

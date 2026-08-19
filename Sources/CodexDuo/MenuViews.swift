@@ -1,7 +1,7 @@
 import AppKit
 import QuartzCore
 
-private let panelWidth: CGFloat = 344
+private let panelWidth: CGFloat = 336
 
 func codexDuoRoundedFont(ofSize size: CGFloat, weight: NSFont.Weight) -> NSFont {
     let base = NSFont.systemFont(ofSize: size, weight: weight)
@@ -15,77 +15,24 @@ private extension NSAppearance {
     var codexDuoIsDark: Bool { self.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua }
 }
 
-private final class GlassSurfaceView: NSVisualEffectView {
-    enum Role { case card, action }
-    private let role: Role
-    private let sheen = CAGradientLayer()
-
-    init(role: Role, cornerRadius: CGFloat) {
-        self.role = role
-        super.init(frame: .zero)
-        self.material = role == .card ? .popover : .menu
-        self.blendingMode = .withinWindow
-        self.state = .active
-        self.wantsLayer = true
-        self.layer?.cornerRadius = cornerRadius
-        self.layer?.cornerCurve = .continuous
-        self.layer?.masksToBounds = true
-        self.layer?.borderWidth = role == .card ? 0.5 : 0
-        self.sheen.startPoint = CGPoint(x: 0.15, y: 1)
-        self.sheen.endPoint = CGPoint(x: 0.85, y: 0)
-        self.sheen.locations = [0, 0.38, 1]
-        self.layer?.insertSublayer(self.sheen, at: 0)
-        self.updateGlassAppearance()
-    }
-
-    override func layout() {
-        super.layout()
-        self.sheen.frame = self.bounds
-    }
-
-    override func viewDidChangeEffectiveAppearance() {
-        super.viewDidChangeEffectiveAppearance()
-        self.updateGlassAppearance()
-    }
-
-    private func updateGlassAppearance() {
-        let dark = self.effectiveAppearance.codexDuoIsDark
-        let baseAlpha: CGFloat = self.role == .card ? (dark ? 0.075 : 0.10) : (dark ? 0.055 : 0.065)
-        self.layer?.borderColor = NSColor.white.withAlphaComponent(dark ? 0.12 : 0.22).cgColor
-        self.layer?.backgroundColor = NSColor.labelColor.withAlphaComponent(baseAlpha).cgColor
-        self.sheen.colors = [
-            NSColor.white.withAlphaComponent(dark ? 0.045 : 0.16).cgColor,
-            NSColor.white.withAlphaComponent(0).cgColor,
-            NSColor.white.withAlphaComponent(dark ? 0.018 : 0.055).cgColor,
-        ]
-    }
-
-    @available(*, unavailable)
-    required init?(coder: NSCoder) { nil }
-}
-
 final class AccountOverviewView: NSView {
     init(registry: CodexRegistry?, isWorking: Bool, errorMessage: String?, target: AnyObject, action: Selector) {
         let accountCount = max(1, registry?.menuAccounts.count ?? 0)
-        super.init(frame: NSRect(x: 0, y: 0, width: panelWidth, height: CGFloat(16 + accountCount * 62)))
-
-        let card = GlassSurfaceView(role: .card, cornerRadius: 11.5)
-        card.translatesAutoresizingMaskIntoConstraints = false
-        addSubview(card)
+        super.init(frame: NSRect(x: 0, y: 0, width: panelWidth, height: CGFloat(8 + accountCount * 60)))
 
         let rows = NSStackView()
         rows.orientation = .vertical
-        rows.alignment = .leading
+        rows.alignment = .centerX
         rows.spacing = 0
         rows.translatesAutoresizingMaskIntoConstraints = false
-        card.addSubview(rows)
+        addSubview(rows)
 
         if let registry, !registry.menuAccounts.isEmpty {
             for (index, account) in registry.menuAccounts.enumerated() {
                 if index > 0 {
                     let divider = HairlineView()
                     rows.addArrangedSubview(divider)
-                    divider.widthAnchor.constraint(equalToConstant: panelWidth - 52).isActive = true
+                    divider.widthAnchor.constraint(equalToConstant: panelWidth - 48).isActive = true
                     divider.heightAnchor.constraint(equalToConstant: 0.5).isActive = true
                 }
                 let active = account.accountKey == registry.activeAccountKey
@@ -96,8 +43,8 @@ final class AccountOverviewView: NSView {
                     target: target,
                     action: action)
                 rows.addArrangedSubview(row)
-                row.widthAnchor.constraint(equalToConstant: panelWidth - 48).isActive = true
-                row.heightAnchor.constraint(equalToConstant: 61.5).isActive = true
+                row.widthAnchor.constraint(equalToConstant: panelWidth - 16).isActive = true
+                row.heightAnchor.constraint(equalToConstant: 59.5).isActive = true
             }
         } else {
             let unavailable = NSTextField(labelWithString: errorMessage ?? "Account data is unavailable")
@@ -107,13 +54,10 @@ final class AccountOverviewView: NSView {
         }
 
         NSLayoutConstraint.activate([
-            card.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 12),
-            card.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -12),
-            card.topAnchor.constraint(equalTo: topAnchor, constant: 8),
-            card.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -8),
-            rows.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: 12),
-            rows.trailingAnchor.constraint(equalTo: card.trailingAnchor, constant: -12),
-            rows.centerYAnchor.constraint(equalTo: card.centerYAnchor),
+            rows.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 8),
+            rows.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -8),
+            rows.topAnchor.constraint(equalTo: topAnchor, constant: 4),
+            rows.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -4),
         ])
     }
 
@@ -129,7 +73,7 @@ private final class HairlineView: NSView {
     }
     override func viewDidChangeEffectiveAppearance() { super.viewDidChangeEffectiveAppearance(); self.updateColor() }
     private func updateColor() {
-        self.layer?.backgroundColor = NSColor.labelColor.withAlphaComponent(self.effectiveAppearance.codexDuoIsDark ? 0.12 : 0.09).cgColor
+        self.layer?.backgroundColor = NSColor.labelColor.withAlphaComponent(self.effectiveAppearance.codexDuoIsDark ? 0.08 : 0.06).cgColor
     }
     @available(*, unavailable) required init?(coder: NSCoder) { nil }
 }
@@ -138,6 +82,7 @@ final class AccountRowButton: NSButton {
     let accountKey: String
     private let canSwitch: Bool
     private let hoverLayer = CALayer()
+    private let refractionLayer = CAGradientLayer()
     private var trackingAreaReference: NSTrackingArea?
     private var isCommitting = false
 
@@ -149,17 +94,21 @@ final class AccountRowButton: NSButton {
         self.title = ""
         self.focusRingType = .none
         self.wantsLayer = true
-        self.layer?.cornerRadius = 8
+        self.layer?.cornerRadius = 9
         self.layer?.cornerCurve = .continuous
-        self.hoverLayer.cornerRadius = 8
+        self.layer?.masksToBounds = true
+        self.hoverLayer.cornerRadius = 9
         self.hoverLayer.opacity = 0
         self.layer?.insertSublayer(self.hoverLayer, at: 0)
+        self.refractionLayer.type = .radial
+        self.refractionLayer.locations = [0, 1]
+        self.refractionLayer.startPoint = CGPoint(x: 0.5, y: 0.5)
+        self.refractionLayer.endPoint = CGPoint(x: 1.05, y: 1.1)
+        self.refractionLayer.opacity = 0
+        self.layer?.insertSublayer(self.refractionLayer, above: self.hoverLayer)
         if canSwitch {
             self.target = target
             self.action = action
-            self.toolTip = "Switch to \(account.displayName)"
-        } else if active {
-            self.toolTip = "Current account"
         }
 
         let marker = ActiveMarkerView(active: active)
@@ -167,7 +116,7 @@ final class AccountRowButton: NSButton {
         addSubview(marker)
 
         let identity = NSTextField(labelWithString: account.displayName)
-        identity.font = NSFont.systemFont(ofSize: 12, weight: active ? .semibold : .medium)
+        identity.font = NSFont.systemFont(ofSize: 11.8, weight: active ? .semibold : .medium)
         identity.textColor = active ? .labelColor : .secondaryLabelColor
         identity.lineBreakMode = .byTruncatingMiddle
         identity.maximumNumberOfLines = 1
@@ -208,11 +157,11 @@ final class AccountRowButton: NSButton {
         addSubview(content)
 
         NSLayoutConstraint.activate([
-            marker.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 1),
+            marker.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 8),
             marker.centerYAnchor.constraint(equalTo: centerYAnchor),
             marker.widthAnchor.constraint(equalToConstant: 7), marker.heightAnchor.constraint(equalToConstant: 7),
             content.leadingAnchor.constraint(equalTo: marker.trailingAnchor, constant: 9),
-            content.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -5),
+            content.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -10),
             content.centerYAnchor.constraint(equalTo: centerYAnchor),
             identityRow.widthAnchor.constraint(equalTo: content.widthAnchor),
             meters.widthAnchor.constraint(equalTo: content.widthAnchor),
@@ -224,6 +173,7 @@ final class AccountRowButton: NSButton {
     override func layout() {
         super.layout()
         self.hoverLayer.frame = self.bounds
+        self.refractionLayer.frame = self.bounds
     }
 
     override func updateTrackingAreas() {
@@ -232,7 +182,7 @@ final class AccountRowButton: NSButton {
         guard self.canSwitch else { return }
         let area = NSTrackingArea(
             rect: self.bounds,
-            options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect],
+            options: [.mouseEnteredAndExited, .mouseMoved, .activeAlways, .inVisibleRect],
             owner: self,
             userInfo: nil)
         self.addTrackingArea(area)
@@ -251,42 +201,79 @@ final class AccountRowButton: NSButton {
 
     override func mouseEntered(with event: NSEvent) {
         guard self.canSwitch, !self.isCommitting else { return }
-        self.animate(alpha: 0.75, scale: 1, duration: 0.16)
+        self.updateRefraction(with: event)
+        self.animateMaterial(base: 0.58, highlight: 0.52, scale: 1, duration: 0.16)
+    }
+
+    override func mouseMoved(with event: NSEvent) {
+        guard self.canSwitch, !self.isCommitting else { return }
+        self.updateRefraction(with: event)
     }
 
     override func mouseExited(with event: NSEvent) {
         guard self.canSwitch, !self.isCommitting else { return }
-        self.animate(alpha: 0, scale: 1, duration: 0.16)
+        self.animateMaterial(base: 0, highlight: 0, scale: 1, duration: 0.18)
     }
 
     override func mouseDown(with event: NSEvent) {
         guard self.canSwitch else { return }
-        self.animate(alpha: 1, scale: 0.992, duration: 0.08)
+        self.updateRefraction(with: event)
+        self.animateMaterial(base: 0.82, highlight: 0.72, scale: 0.992, duration: 0.08)
         super.mouseDown(with: event)
-        if !self.isCommitting { self.animate(alpha: 0.75, scale: 1, duration: 0.12) }
+        if !self.isCommitting { self.animateMaterial(base: 0.58, highlight: 0.52, scale: 1, duration: 0.14) }
     }
 
     func playSelectionAnimation(completion: @escaping () -> Void) {
         guard self.canSwitch else { return }
         self.isCommitting = true
-        self.animate(alpha: 1, scale: 0.985, duration: 0.12)
+        self.animateMaterial(base: 0.92, highlight: 0.88, scale: 0.982, duration: 0.12)
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.14) { [weak self] in
-            self?.animate(alpha: 0, scale: 1, duration: 0.14)
+            self?.animateMaterial(base: 0, highlight: 0, scale: 1, duration: 0.16)
             completion()
         }
     }
 
     private func updateHoverColor() {
         let dark = self.effectiveAppearance.codexDuoIsDark
-        self.hoverLayer.backgroundColor = NSColor.labelColor.withAlphaComponent(dark ? 0.075 : 0.055).cgColor
+        self.hoverLayer.backgroundColor = NSColor.labelColor.withAlphaComponent(dark ? 0.055 : 0.04).cgColor
+        self.refractionLayer.colors = [
+            NSColor.white.withAlphaComponent(dark ? 0.11 : 0.32).cgColor,
+            NSColor.white.withAlphaComponent(0).cgColor,
+        ]
     }
 
-    private func animate(alpha: Float, scale: CGFloat, duration: CFTimeInterval) {
+    private func updateRefraction(with event: NSEvent) {
+        let location = self.convert(event.locationInWindow, from: nil)
+        let x = min(1, max(0, location.x / max(1, self.bounds.width)))
+        let y = min(1, max(0, location.y / max(1, self.bounds.height)))
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        self.refractionLayer.startPoint = CGPoint(x: x, y: y)
+        self.refractionLayer.endPoint = CGPoint(x: x + 0.58, y: y + 0.8)
+        CATransaction.commit()
+    }
+
+    private func animateMaterial(base: Float, highlight: Float, scale: CGFloat, duration: CFTimeInterval) {
         CATransaction.begin()
         CATransaction.setAnimationDuration(duration)
         CATransaction.setAnimationTimingFunction(CAMediaTimingFunction(name: .easeOut))
-        self.hoverLayer.opacity = alpha
-        self.layer?.setAffineTransform(CGAffineTransform(scaleX: scale, y: scale))
+        self.hoverLayer.opacity = base
+        self.refractionLayer.opacity = highlight
+        CATransaction.commit()
+
+        guard let layer = self.layer else { return }
+        let spring = CASpringAnimation(keyPath: "transform.scale")
+        spring.fromValue = layer.presentation()?.value(forKeyPath: "transform.scale") ?? 1
+        spring.toValue = scale
+        spring.mass = 0.7
+        spring.stiffness = 260
+        spring.damping = 22
+        spring.initialVelocity = 0.2
+        spring.duration = max(duration, min(0.32, spring.settlingDuration))
+        layer.add(spring, forKey: "codexDuoRowScale")
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        layer.setAffineTransform(CGAffineTransform(scaleX: scale, y: scale))
         CATransaction.commit()
     }
 
