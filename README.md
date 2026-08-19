@@ -6,7 +6,8 @@ It reads the account registry maintained by [`codex-auth`](https://github.com/Lo
 
 ## Features
 
-- Native AppKit menu-bar interface with a compact grayscale design.
+- Native AppKit menu-bar interface with a compact, adaptive Liquid Glass design.
+- System-aware light and dark materials with restrained depth, highlights, and motion.
 - Weekly remaining quota for both accounts in the menu-bar title.
 - Adaptive usage meters: only windows reported by `codex-auth` are shown.
 - Automatic 5-hour/weekly two-column layout if the 300-minute window returns in the future.
@@ -61,7 +62,7 @@ Create a versioned release archive:
 ./Scripts/package_release.sh
 ```
 
-The archive is written to `dist/`. GitHub Actions runs the same tests and build on every push and pull request. Pushing a tag such as `v0.4.1` creates a GitHub release when the tag matches the version in `Resources/Info.plist`.
+The archive is written to `dist/`. GitHub Actions runs the same tests and build on every push and pull request. Pushing a tag such as `v0.5.0` creates a GitHub release when the tag matches the version in `Resources/Info.plist`.
 
 ## How it works
 

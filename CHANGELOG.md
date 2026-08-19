@@ -2,6 +2,14 @@
 
 All notable changes to Codex Duo are documented here.
 
+## 0.5.0 - 2026-08-18
+
+- Redesigned the menu with native AppKit visual-effect materials and adaptive light/dark styling.
+- Added subtle glass highlights, hairline borders, compact plan badges, and restrained depth.
+- Tightened the panel to 352 points with denser account rows and a 34-point switch action.
+- Refined typography, quota tracks, active-account marker, and hover/press feedback.
+- Added a preview-only appearance override for deterministic light and dark visual testing.
+
 ## 0.4.1 - 2026-08-18
 
 - Removed the redundant Accounts heading.

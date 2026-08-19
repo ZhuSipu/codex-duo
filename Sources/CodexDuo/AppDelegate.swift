@@ -12,10 +12,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var lastError: String?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        var forcedAppearance: NSAppearance?
+        if let previewAppearance = ProcessInfo.processInfo.environment["CODEX_DUO_APPEARANCE"] {
+            forcedAppearance = NSAppearance(named: previewAppearance == "dark" ? .darkAqua : .aqua)
+            NSApp.appearance = forcedAppearance
+        }
+
         self.statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         self.statusItem.button?.image = nil
 
         let menu = NSMenu()
+        menu.appearance = forcedAppearance
         menu.delegate = self
         self.statusItem.menu = menu
 
@@ -91,8 +98,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             registry: self.registry,
             errorMessage: self.lastError)
         menu.addItem(accountsItem)
-
-        menu.addItem(.separator())
 
         let switchItem = NSMenuItem()
         switchItem.view = SwitchActionView(
