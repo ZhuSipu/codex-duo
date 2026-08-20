@@ -6,4 +6,6 @@ dist/
 *.xcodeproj/
 xcuserdata/
 DerivedData/
+[Bb]in/
+[Oo]bj/
 handover.md

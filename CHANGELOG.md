@@ -2,6 +2,14 @@
 
 All notable changes to Codex Duo are documented here.
 
+## 0.8.0 - 2026-08-19
+
+- Added a native Windows 10/11 tray app with account, appearance, refresh, startup, settings, and quit controls.
+- Added safe Codex desktop restart through the Windows Start Apps registry without force-killing active Codex work.
+- Added discovery for native, npm `.cmd`, and PATH-installed `codex-auth` executables on Windows.
+- Added first-run dependency setup, a per-user Inno Setup installer, and a self-contained portable ZIP.
+- Added Windows model tests, WPF compilation in CI, and parallel macOS/Windows tagged releases.
+
 ## 0.7.0 - 2026-08-19
 
 - Added a native settings window for appearance, refresh interval, startup, and account management.
