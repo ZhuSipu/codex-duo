@@ -10,6 +10,7 @@ swiftc \
   -parse-as-library \
   -framework AppKit \
   "$project_dir/Sources/CodexDuo/AppPreferences.swift" \
+  "$project_dir/Sources/CodexDuo/CodexAuthCommands.swift" \
   "$project_dir/Sources/CodexDuo/Models.swift" \
   "$project_dir/Tests/ModelTests.swift" \
   -o "$test_binary"

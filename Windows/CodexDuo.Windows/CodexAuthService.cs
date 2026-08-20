@@ -18,8 +18,8 @@ public sealed class CodexAuthService
         return await JsonSerializer.DeserializeAsync<CodexRegistry>(stream, cancellationToken: token) ?? throw new InvalidDataException("The codex-auth registry is empty.");
     }
     public Task<CommandResult> RefreshAsync() => RunAsync(["list"]);
-    public Task<CommandResult> SetAliasAsync(string account, string? alias) => string.IsNullOrWhiteSpace(alias) ? RunAsync(["alias", "clear", account]) : RunAsync(["alias", "set", account, alias.Trim()]);
-    public Task<CommandResult> RemoveAsync(string account) => RunAsync(["remove", account, "--skip-api"]);
+    public Task<CommandResult> SetAliasAsync(string accountKey, string? alias) => RunAsync(CodexAuthCommands.SetAlias(accountKey, alias));
+    public Task<CommandResult> RemoveAsync(string accountKey) => RunAsync(CodexAuthCommands.RemoveAccount(accountKey));
 
     public CommandResult OpenLoginTerminal()
     {
@@ -37,7 +37,7 @@ public sealed class CodexAuthService
         if (appId is null) return new(4, "", "The official Codex app was not found in the Windows Start menu. Install or launch it once, then retry.");
         var close = await CloseCodexDesktopAsync();
         if (!close.Succeeded) return close;
-        var switched = await RunAsync(["switch", target.Email]);
+        var switched = await RunAsync(CodexAuthCommands.SwitchAccount(target.AccountKey));
         if (!switched.Succeeded) { LaunchCodex(appId); return switched; }
         try
         {

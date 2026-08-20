@@ -178,30 +178,33 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
               let target = registry.switchTarget(accountKey: row.accountKey)
         else { return }
 
+        self.statusItem.menu?.cancelTracking()
+        if self.previewAccountCount != nil { return }
+        DispatchQueue.main.async { [weak self] in self?.confirmAndSwitch(to: target) }
+    }
+
+    private func confirmAndSwitch(to target: CodexAccount) {
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = "Switch to \(target.displayName)?"
+        alert.informativeText = "Codex must quit and restart to use this account. Finish or stop any active work before continuing. Codex Duo will not force-quit Codex."
+        alert.addButton(withTitle: "Switch and Restart")
+        alert.addButton(withTitle: "Cancel")
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+
         self.isSwitching = true
         self.lastError = nil
         self.updateStatusItem()
 
-        row.playSelectionAnimation { [weak self] in
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self else { return }
-            self.statusItem.menu?.cancelTracking()
-            if self.previewAccountCount != nil {
+            let result = self.service.switchAccountAndRestartCodex(accountKey: target.accountKey)
+            DispatchQueue.main.async {
                 self.isSwitching = false
-                self.updateStatusItem()
-                return
-            }
-            DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-                guard let self else { return }
-                let result = self.service.switchAccountAndRestartCodex(
-                    selector: target.email,
-                    expectedAccountKey: target.accountKey)
-                DispatchQueue.main.async {
-                    self.isSwitching = false
-                    self.lastError = result.succeeded ? nil : self.errorMessage(result)
-                    self.reloadRegistry()
-                    if !result.succeeded {
-                        self.showSwitchFailure(self.lastError ?? "The account switch failed.")
-                    }
+                self.lastError = result.succeeded ? nil : self.errorMessage(result)
+                self.reloadRegistry()
+                if !result.succeeded {
+                    self.showSwitchFailure(self.lastError ?? "The account switch failed.")
                 }
             }
         }

@@ -72,6 +72,11 @@ public partial class App : System.Windows.Application
     public async Task SwitchAsync(CodexAccount account)
     {
         if (IsBusy || Registry?.ActiveAccountKey == account.AccountKey) return;
+        if (System.Windows.MessageBox.Show(
+                $"Codex must close and restart to switch to {account.DisplayName}. Finish or stop active work before continuing.",
+                "Switch Codex account?",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
         IsBusy = true; LastError = null; UpdateViews(); trayWindow?.Hide();
         var result = await service.SwitchAndRestartCodexAsync(account);
         IsBusy = false; LastError = result.Succeeded ? null : ErrorText(result);

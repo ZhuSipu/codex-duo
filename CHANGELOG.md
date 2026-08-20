@@ -2,6 +2,14 @@
 
 All notable changes to Codex Duo are documented here.
 
+## 0.8.1 - 2026-08-19
+
+- Fixed account removal by using selector mode without the incompatible `--skip-api` flag.
+- Switched remove, rename, and account switching commands to unique account keys instead of potentially ambiguous emails.
+- Removed the macOS forced `pkill` fallback; an account remains unchanged if Codex does not quit cleanly.
+- Added an explicit restart warning before account switches on macOS and Windows.
+- Added command-contract regression tests for both platforms.
+
 ## 0.8.0 - 2026-08-19
 
 - Added a native Windows 10/11 tray app with account, appearance, refresh, startup, settings, and quit controls.

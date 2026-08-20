@@ -27,13 +27,13 @@ public partial class SettingsWindow : Window
     {
         if (AccountsList.SelectedItem is not CodexAccount account) { SelectAccount(); return; }
         var alias = Interaction.InputBox($"Enter a display name for {account.Email}. Leave it empty to clear the alias.", "Rename account", account.Alias ?? "");
-        var result = await app.Service.SetAliasAsync(account.Email, alias); await app.ReloadRegistryAsync(); if (!result.Succeeded) ShowError(result);
+        var result = await app.Service.SetAliasAsync(account.AccountKey, alias); await app.ReloadRegistryAsync(); if (!result.Succeeded) ShowError(result);
     }
     private async void Remove_Click(object sender, RoutedEventArgs e)
     {
         if (AccountsList.SelectedItem is not CodexAccount account) { SelectAccount(); return; }
         if (System.Windows.MessageBox.Show($"Remove {account.DisplayName} from codex-auth? This does not revoke the account itself.", "Remove account", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
-        var result = await app.Service.RemoveAsync(account.Email); await app.ReloadRegistryAsync(); if (!result.Succeeded) ShowError(result);
+        var result = await app.Service.RemoveAsync(account.AccountKey); await app.ReloadRegistryAsync(); if (!result.Succeeded) ShowError(result);
     }
     private async void Refresh_Click(object sender, RoutedEventArgs e) => await app.RefreshUsageAsync();
     private void Install_Click(object sender, RoutedEventArgs e) { try { app.Service.OpenDependencyInstaller(); } catch (Exception ex) { System.Windows.MessageBox.Show("Unable to start npm. Install Node.js, then run:\n\nnpm install -g @loongphy/codex-auth@next\n\n" + ex.Message, "Dependency installation", MessageBoxButton.OK, MessageBoxImage.Information); } }

@@ -312,7 +312,7 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
         guard alert.runModal() == .alertFirstButtonReturn else { return }
         let alias = field.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
         self.performAccountTask(status: "Updating alias…") {
-            self.service.setAlias(account: account.email, alias: alias.isEmpty ? nil : alias)
+            self.service.setAlias(accountKey: account.accountKey, alias: alias.isEmpty ? nil : alias)
         }
     }
 
@@ -326,7 +326,7 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
         alert.addButton(withTitle: "Cancel")
         guard alert.runModal() == .alertFirstButtonReturn else { return }
         self.performAccountTask(status: "Removing account…") {
-            self.service.removeAccount(account.email)
+            self.service.removeAccount(accountKey: account.accountKey)
         }
     }
 

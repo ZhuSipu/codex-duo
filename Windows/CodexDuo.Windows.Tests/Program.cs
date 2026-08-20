@@ -18,5 +18,10 @@ Assert(many.MenuAccounts.Count == 10 && many.MenuAccounts[^1].AccountKey == "11"
 var now = DateTimeOffset.FromUnixTimeSeconds(100_000);
 Assert(new RateLimitWindow { UsedPercent = 20, ResetsAt = 188_260 }.ResetText(now) == "1d 31min", "day countdown");
 Assert(new RateLimitWindow { UsedPercent = 20, ResetsAt = 111_520 }.ResetText(now) == "3h 12min", "hour countdown");
+const string accountKey = "user-id::workspace-id";
+Assert(CodexAuthCommands.SwitchAccount(accountKey).SequenceEqual(["switch", accountKey]), "switch uses unique account key");
+Assert(CodexAuthCommands.RemoveAccount(accountKey).SequenceEqual(["remove", accountKey]), "remove uses selector mode without incompatible flags");
+Assert(CodexAuthCommands.SetAlias(accountKey, "work").SequenceEqual(["alias", "set", accountKey, "work"]), "alias uses unique account key");
+Assert(!CodexAuthCommands.RemoveAccount(accountKey).Contains("--skip-api"), "selector remove excludes skip-api");
 Console.WriteLine("Windows model tests passed");
 static void Assert(bool condition, string name) { if (!condition) throw new Exception("Assertion failed: " + name); }

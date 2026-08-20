@@ -39,7 +39,7 @@ On macOS, Codex Duo looks for `codex-auth` in `~/.local/bin`, `/opt/homebrew/bin
 
 On macOS, download the DMG, open it, and drag **Codex Duo** to **Applications**. A ZIP is also provided.
 
-On Windows, download `Codex-Duo-0.8.0-Windows-x64-Setup.exe`. The per-user installer does not require administrator access and can optionally start Codex Duo at sign-in. A self-contained portable ZIP is also provided: extract it to a permanent folder before enabling startup, then run `CodexDuo.exe`. Windows SmartScreen may warn until releases are Authenticode-signed; use **More info → Run anyway** only for a release downloaded from this repository.
+On Windows, download the latest `Codex-Duo-*-Windows-x64-Setup.exe`. The per-user installer does not require administrator access and can optionally start Codex Duo at sign-in. A self-contained portable ZIP is also provided: extract it to a permanent folder before enabling startup, then run `CodexDuo.exe`. Windows SmartScreen may warn until releases are Authenticode-signed; use **More info → Run anyway** only for a release downloaded from this repository.
 
 The current personal build is ad-hoc signed, not Apple-notarized. On first launch, macOS may require Control-clicking the app in Applications and choosing **Open**. Do not bypass Gatekeeper for unrelated software.
 

@@ -37,15 +37,12 @@ final class CodexAuthService {
         self.runCodexAuth(arguments: ["list"])
     }
 
-    func setAlias(account: String, alias: String?) -> CommandResult {
-        if let alias, !alias.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            return self.runCodexAuth(arguments: ["alias", "set", account, alias])
-        }
-        return self.runCodexAuth(arguments: ["alias", "clear", account])
+    func setAlias(accountKey: String, alias: String?) -> CommandResult {
+        self.runCodexAuth(arguments: CodexAuthCommands.setAlias(accountKey: accountKey, alias: alias))
     }
 
-    func removeAccount(_ account: String) -> CommandResult {
-        self.runCodexAuth(arguments: ["remove", account, "--skip-api"])
+    func removeAccount(accountKey: String) -> CommandResult {
+        self.runCodexAuth(arguments: CodexAuthCommands.removeAccount(accountKey: accountKey))
     }
 
     func openLoginInTerminal() -> CommandResult {
@@ -60,7 +57,7 @@ final class CodexAuthService {
         return self.runExecutable(path: "/usr/bin/osascript", arguments: ["-e", appleScript])
     }
 
-    func switchAccountAndRestartCodex(selector: String, expectedAccountKey: String) -> CommandResult {
+    func switchAccountAndRestartCodex(accountKey: String) -> CommandResult {
         let quitResult = self.quitCodexApp()
         if !quitResult.succeeded, self.isCodexAppRunning() {
             return quitResult
@@ -68,11 +65,13 @@ final class CodexAuthService {
 
         self.waitForCodexAppToExit(timeout: 10)
         if self.isCodexAppRunning() {
-            _ = self.runExecutable(path: "/usr/bin/pkill", arguments: ["-TERM", "-x", "ChatGPT"])
-            self.waitForCodexAppToExit(timeout: 4)
+            return CommandResult(
+                status: 5,
+                stdout: "",
+                stderr: "Codex did not quit within 10 seconds. Finish or stop active work, close Codex, and try again. Your account was not changed.")
         }
 
-        let switchResult = self.runCodexAuth(arguments: ["switch", selector])
+        let switchResult = self.runCodexAuth(arguments: CodexAuthCommands.switchAccount(accountKey: accountKey))
         guard switchResult.succeeded else {
             _ = self.openCodexApp()
             return switchResult
@@ -80,7 +79,7 @@ final class CodexAuthService {
 
         do {
             let registry = try self.loadRegistry()
-            guard registry.activeAccountKey == expectedAccountKey else {
+            guard registry.activeAccountKey == accountKey else {
                 _ = self.openCodexApp()
                 return CommandResult(
                     status: 2,

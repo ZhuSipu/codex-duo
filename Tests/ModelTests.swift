@@ -76,6 +76,13 @@ enum ModelTests {
         precondition(preferences.appearanceMode == .dark)
         precondition(preferences.refreshInterval == .off)
 
+        let accountKey = "user-id::workspace-id"
+        precondition(CodexAuthCommands.switchAccount(accountKey: accountKey) == ["switch", accountKey])
+        precondition(CodexAuthCommands.removeAccount(accountKey: accountKey) == ["remove", accountKey])
+        precondition(CodexAuthCommands.setAlias(accountKey: accountKey, alias: "work") == ["alias", "set", accountKey, "work"])
+        precondition(CodexAuthCommands.setAlias(accountKey: accountKey, alias: "  ") == ["alias", "clear", accountKey])
+        precondition(!CodexAuthCommands.removeAccount(accountKey: accountKey).contains("--skip-api"))
+
         let testNow = Date(timeIntervalSince1970: 100_000)
         let countdown = RateLimitWindow(
             usedPercent: 20,
