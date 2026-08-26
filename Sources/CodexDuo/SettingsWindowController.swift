@@ -9,12 +9,19 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
     private let onRefreshRequested: () -> Void
 
     private let appearanceControl = NSSegmentedControl(
-        labels: AppearanceMode.allCases.map(\.title),
+        labels: ["System", "Light", "Dark"],
         trackingMode: .selectOne,
         target: nil,
         action: nil)
+    private let languagePopup = NSPopUpButton()
     private let refreshPopup = NSPopUpButton()
-    private let launchAtLoginButton = NSButton(checkboxWithTitle: "Open Codex Duo at login", target: nil, action: nil)
+    private let launchAtLoginButton = NSButton(checkboxWithTitle: "", target: nil, action: nil)
+    private let autoActivateButton = NSButton(checkboxWithTitle: "", target: nil, action: nil)
+    private let generalHeading = NSTextField(labelWithString: "")
+    private let accountsHeading = NSTextField(labelWithString: "")
+    private let languageLabel = NSTextField(labelWithString: "")
+    private let appearanceLabel = NSTextField(labelWithString: "")
+    private let refreshLabel = NSTextField(labelWithString: "")
     private let dependencyLabel = NSTextField(labelWithString: "")
     private let accountSummaryLabel = NSTextField(labelWithString: "")
     private let statusLabel = NSTextField(labelWithString: "")
@@ -42,15 +49,15 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
         self.onRefreshRequested = onRefreshRequested
 
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 500, height: 520),
+            contentRect: NSRect(x: 0, y: 0, width: 600, height: 540),
             styleMask: [.titled, .closable, .miniaturizable],
             backing: .buffered,
             defer: false)
-        window.title = "Codex Duo Settings"
         window.isReleasedWhenClosed = false
         window.center()
         super.init(window: window)
         self.buildInterface()
+        self.applyLocalization()
         self.reloadState()
     }
 
@@ -73,14 +80,10 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
         let title = NSTextField(labelWithString: "Codex Duo")
         title.font = NSFont.systemFont(ofSize: 20, weight: .semibold)
         title.alignment = .left
-        let subtitle = NSTextField(labelWithString: "Account switching and usage preferences")
-        subtitle.font = NSFont.systemFont(ofSize: 11.5)
-        subtitle.textColor = .secondaryLabelColor
-        subtitle.alignment = .left
-        let heading = NSStackView(views: [title, subtitle])
-        heading.orientation = .vertical
-        heading.alignment = .leading
-        heading.spacing = 2
+
+        self.languagePopup.addItems(withTitles: self.languageNames)
+        self.languagePopup.target = self
+        self.languagePopup.action = #selector(self.changeLanguage(_:))
 
         self.appearanceControl.target = self
         self.appearanceControl.action = #selector(self.changeAppearance(_:))
@@ -90,28 +93,51 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
         self.refreshPopup.action = #selector(self.changeRefreshInterval(_:))
         self.launchAtLoginButton.target = self
         self.launchAtLoginButton.action = #selector(self.changeLaunchAtLogin(_:))
+        self.autoActivateButton.target = self
+        self.autoActivateButton.action = #selector(self.changeAutoActivation(_:))
 
-        let generalHeading = self.sectionHeading("General")
-        let appearanceRow = self.formRow(title: "Appearance", control: self.appearanceControl)
-        let refreshRow = self.formRow(title: "Automatic refresh", control: self.refreshPopup)
-        let launchRow = self.formRow(title: "Startup", control: self.launchAtLoginButton)
+        for control in [self.languagePopup, self.refreshPopup] {
+            control.controlSize = .regular
+            control.widthAnchor.constraint(equalToConstant: 210).isActive = true
+        }
+        self.appearanceControl.controlSize = .regular
+        self.appearanceControl.widthAnchor.constraint(equalToConstant: 210).isActive = true
 
-        let accountsHeading = self.sectionHeading("Accounts")
-        self.dependencyLabel.font = NSFont.systemFont(ofSize: 11)
+        self.styleSectionHeading(self.generalHeading)
+        let languageRow = self.formRow(label: self.languageLabel, control: self.languagePopup)
+        let appearanceRow = self.formRow(label: self.appearanceLabel, control: self.appearanceControl)
+        let refreshRow = self.formRow(label: self.refreshLabel, control: self.refreshPopup)
+        let generalStack = NSStackView(views: [
+            languageRow,
+            self.separator(),
+            appearanceRow,
+            self.separator(),
+            refreshRow,
+            self.separator(),
+            self.checkboxRow(self.launchAtLoginButton),
+            self.separator(),
+            self.checkboxRow(self.autoActivateButton),
+        ])
+        generalStack.orientation = .vertical
+        generalStack.alignment = .width
+        generalStack.spacing = 0
+        let generalCard = self.card(containing: generalStack)
+
+        self.styleSectionHeading(self.accountsHeading)
+        self.dependencyLabel.font = NSFont.systemFont(ofSize: 10.5)
         self.dependencyLabel.textColor = .secondaryLabelColor
-        self.accountSummaryLabel.font = NSFont.systemFont(ofSize: 11)
-        self.accountSummaryLabel.textColor = .secondaryLabelColor
-        let accountStatus = NSStackView(views: [self.dependencyLabel, self.accountSummaryLabel])
-        accountStatus.orientation = .vertical
-        accountStatus.alignment = .leading
-        accountStatus.spacing = 2
+        self.accountSummaryLabel.font = NSFont.systemFont(ofSize: 11, weight: .medium)
+        let accountStatus = NSStackView(views: [self.accountSummaryLabel, NSView(), self.dependencyLabel])
+        accountStatus.orientation = .horizontal
+        accountStatus.alignment = .centerY
+        accountStatus.distribution = .fill
 
         let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("account"))
         column.resizingMask = .autoresizingMask
         self.tableView.addTableColumn(column)
         self.tableView.headerView = nil
-        self.tableView.rowHeight = 43
-        self.tableView.intercellSpacing = NSSize(width: 0, height: 2)
+        self.tableView.rowHeight = 46
+        self.tableView.intercellSpacing = NSSize(width: 0, height: 0)
         self.tableView.backgroundColor = .clear
         self.tableView.selectionHighlightStyle = .regular
         self.tableView.dataSource = self
@@ -122,7 +148,7 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
         scrollView.autohidesScrollers = true
         scrollView.drawsBackground = false
         scrollView.borderType = .noBorder
-        scrollView.heightAnchor.constraint(equalToConstant: 190).isActive = true
+        scrollView.heightAnchor.constraint(equalToConstant: 120).isActive = true
 
         self.addButton.target = self
         self.addButton.action = #selector(self.addAccount(_:))
@@ -138,68 +164,104 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
             button.bezelStyle = .rounded
             button.controlSize = .small
         }
-        let accountActions = NSStackView(views: [self.addButton, self.renameButton, self.removeButton, NSView(), self.refreshButton])
-        accountActions.orientation = .horizontal
-        accountActions.spacing = 7
-        accountActions.distribution = .fill
-
         self.statusLabel.font = NSFont.systemFont(ofSize: 10.5)
         self.statusLabel.textColor = .secondaryLabelColor
         self.statusLabel.lineBreakMode = .byTruncatingTail
-        let dependencyActions = NSStackView(views: [self.installButton, self.statusLabel])
-        dependencyActions.orientation = .horizontal
-        dependencyActions.alignment = .centerY
-        dependencyActions.spacing = 10
+        let accountActions = NSStackView(views: [
+            self.addButton,
+            self.renameButton,
+            self.removeButton,
+            self.installButton,
+            NSView(),
+            self.refreshButton,
+        ])
+        accountActions.orientation = .horizontal
+        accountActions.alignment = .centerY
+        accountActions.spacing = 7
+        accountActions.distribution = .fill
 
-        let note = NSTextField(wrappingLabelWithString: "Credentials remain managed by codex-auth. Codex Duo never displays or stores access tokens. Adding an account opens the official login flow in Terminal.")
-        note.font = NSFont.systemFont(ofSize: 10.5)
-        note.textColor = .tertiaryLabelColor
+        let accountsStack = NSStackView(views: [
+            accountStatus,
+            self.separator(),
+            scrollView,
+            self.separator(),
+            accountActions,
+        ])
+        accountsStack.orientation = .vertical
+        accountsStack.alignment = .width
+        accountsStack.spacing = 8
+        let accountsCard = self.card(containing: accountsStack)
 
         let stack = NSStackView(views: [
-            heading,
-            self.separator(),
-            generalHeading,
-            appearanceRow,
-            refreshRow,
-            launchRow,
-            self.separator(),
-            accountsHeading,
-            accountStatus,
-            scrollView,
-            accountActions,
-            dependencyActions,
-            note,
+            title,
+            self.generalHeading,
+            generalCard,
+            self.accountsHeading,
+            accountsCard,
         ])
         stack.orientation = .vertical
-        stack.alignment = .width
-        stack.spacing = 11
+        stack.alignment = .leading
+        stack.spacing = 12
         stack.translatesAutoresizingMaskIntoConstraints = false
         background.addSubview(stack)
+        for view in [title, self.generalHeading, generalCard, self.accountsHeading, accountsCard] {
+            view.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
+        }
+        stack.setCustomSpacing(18, after: title)
+        stack.setCustomSpacing(6, after: self.generalHeading)
+        stack.setCustomSpacing(16, after: generalCard)
+        stack.setCustomSpacing(6, after: self.accountsHeading)
         NSLayoutConstraint.activate([
             stack.leadingAnchor.constraint(equalTo: background.leadingAnchor, constant: 24),
             stack.trailingAnchor.constraint(equalTo: background.trailingAnchor, constant: -24),
-            stack.topAnchor.constraint(equalTo: background.topAnchor, constant: 22),
-            stack.bottomAnchor.constraint(lessThanOrEqualTo: background.bottomAnchor, constant: -20),
+            stack.topAnchor.constraint(equalTo: background.topAnchor, constant: 20),
+            stack.bottomAnchor.constraint(lessThanOrEqualTo: background.bottomAnchor, constant: -16),
         ])
     }
 
-    private func sectionHeading(_ text: String) -> NSTextField {
-        let label = NSTextField(labelWithString: text)
+    private func styleSectionHeading(_ label: NSTextField) {
         label.font = NSFont.systemFont(ofSize: 12, weight: .semibold)
-        label.textColor = .labelColor
+        label.textColor = .secondaryLabelColor
         label.alignment = .left
-        return label
     }
 
-    private func formRow(title: String, control: NSView) -> NSStackView {
-        let label = NSTextField(labelWithString: title)
+    private func formRow(label: NSTextField, control: NSView) -> NSStackView {
         label.font = NSFont.systemFont(ofSize: 11.5, weight: .medium)
+        label.widthAnchor.constraint(equalToConstant: 132).isActive = true
         let spacer = NSView()
         let row = NSStackView(views: [label, spacer, control])
         row.orientation = .horizontal
         row.alignment = .centerY
         row.distribution = .fill
+        row.heightAnchor.constraint(equalToConstant: 38).isActive = true
         return row
+    }
+
+    private func checkboxRow(_ control: NSButton) -> NSStackView {
+        let row = NSStackView(views: [NSView(), control])
+        row.orientation = .horizontal
+        row.alignment = .centerY
+        row.distribution = .fill
+        row.heightAnchor.constraint(equalToConstant: 38).isActive = true
+        return row
+    }
+
+    private func card(containing content: NSView) -> NSBox {
+        let box = NSBox()
+        box.boxType = .custom
+        box.borderWidth = 1
+        box.borderColor = .separatorColor
+        box.fillColor = .controlBackgroundColor
+        box.cornerRadius = 10
+        content.translatesAutoresizingMaskIntoConstraints = false
+        box.addSubview(content)
+        NSLayoutConstraint.activate([
+            content.leadingAnchor.constraint(equalTo: box.leadingAnchor, constant: 14),
+            content.trailingAnchor.constraint(equalTo: box.trailingAnchor, constant: -14),
+            content.topAnchor.constraint(equalTo: box.topAnchor, constant: 10),
+            content.bottomAnchor.constraint(equalTo: box.bottomAnchor, constant: -10),
+        ])
+        return box
     }
 
     private func separator() -> NSBox {
@@ -208,21 +270,60 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
         return box
     }
 
+    private var language: AppLanguage { self.preferences.language }
+
+    private func text(_ key: String) -> String {
+        SettingsText.value(key, language: self.language)
+    }
+
+    private var languageNames: [String] {
+        [self.text("language.system")] + AppLanguage.allCases.dropFirst().map(\.displayName)
+    }
+
+    private func applyLocalization() {
+        self.window?.title = self.text("window.title")
+        self.generalHeading.stringValue = self.text("general")
+        self.accountsHeading.stringValue = self.text("accounts")
+        self.languageLabel.stringValue = self.text("language")
+        self.appearanceLabel.stringValue = self.text("appearance")
+        self.refreshLabel.stringValue = self.text("refresh")
+        self.launchAtLoginButton.title = self.text("startup")
+        self.autoActivateButton.title = self.text("activation")
+        self.addButton.title = self.text("add")
+        self.renameButton.title = self.text("rename")
+        self.removeButton.title = self.text("remove")
+        self.refreshButton.title = self.text("refreshNow")
+        self.installButton.title = self.text("install")
+
+        ["system", "light", "dark"].enumerated().forEach {
+            self.appearanceControl.setLabel(self.text($0.element), forSegment: $0.offset)
+        }
+        self.refreshPopup.removeAllItems()
+        self.refreshPopup.addItems(withTitles: ["off", "1m", "2m", "5m", "10m", "15m"].map(self.text))
+        self.languagePopup.removeAllItems()
+        self.languagePopup.addItems(withTitles: self.languageNames)
+    }
+
     private func reloadState(status: String? = nil) {
+        let languageIndex = AppLanguage.allCases.firstIndex(of: self.preferences.language) ?? 0
+        self.languagePopup.selectItem(at: languageIndex)
         let appearanceIndex = AppearanceMode.allCases.firstIndex(of: self.preferences.appearanceMode) ?? 0
         self.appearanceControl.selectedSegment = appearanceIndex
         let refreshIndex = RefreshInterval.allCases.firstIndex(of: self.preferences.refreshInterval) ?? 0
         self.refreshPopup.selectItem(at: refreshIndex)
         self.launchAtLoginButton.state = self.launchAtLogin.isEnabled ? .on : .off
+        self.autoActivateButton.state = self.preferences.autoActivateRefreshedAccounts ? .on : .off
 
         let registry = self.registryProvider()
         self.accounts = registry?.menuAccounts ?? []
         self.activeAccountKey = registry?.activeAccountKey
         self.tableView.reloadData()
-        self.dependencyLabel.stringValue = self.service.versionText.map { "Dependency: \($0)" } ?? "Dependency: codex-auth not installed"
+        self.dependencyLabel.stringValue = self.service.versionText.map {
+            String(format: self.text("dependencyReady"), $0)
+        } ?? self.text("dependencyMissing")
         self.accountSummaryLabel.stringValue = self.accounts.isEmpty
-            ? "No configured accounts"
-            : "\(self.accounts.count) configured account\(self.accounts.count == 1 ? "" : "s") · maximum 10"
+            ? self.text("none")
+            : String(format: self.text("accountCount"), self.accounts.count)
         self.statusLabel.stringValue = status ?? ""
         self.updateButtonState()
     }
@@ -242,10 +343,14 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
     func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
         guard self.accounts.indices.contains(row) else { return nil }
         let account = self.accounts[row]
+        let icon = NSImageView(image: NSImage(systemSymbolName: "person.crop.circle.fill", accessibilityDescription: nil) ?? NSImage())
+        icon.contentTintColor = account.accountKey == self.activeAccountKey ? .controlAccentColor : .tertiaryLabelColor
+        icon.symbolConfiguration = NSImage.SymbolConfiguration(pointSize: 17, weight: .regular)
+        icon.widthAnchor.constraint(equalToConstant: 24).isActive = true
         let primary = NSTextField(labelWithString: account.displayName)
         primary.font = NSFont.systemFont(ofSize: 11.5, weight: account.accountKey == self.activeAccountKey ? .semibold : .medium)
         primary.lineBreakMode = .byTruncatingMiddle
-        let secondaryText = account.displayName == account.email ? (account.plan ?? "Unknown").capitalized : account.email
+        let secondaryText = account.displayName == account.email ? (account.plan ?? self.text("unknown")).capitalized : account.email
         let secondary = NSTextField(labelWithString: secondaryText)
         secondary.font = NSFont.systemFont(ofSize: 9.5)
         secondary.textColor = .secondaryLabelColor
@@ -255,17 +360,35 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
         labels.alignment = .leading
         labels.spacing = 1
         let spacer = NSView()
-        let state = NSTextField(labelWithString: account.accountKey == self.activeAccountKey ? "Current" : "")
+        let state = NSTextField(labelWithString: account.accountKey == self.activeAccountKey ? self.text("current") : "")
         state.font = NSFont.systemFont(ofSize: 9.5, weight: .medium)
         state.textColor = .secondaryLabelColor
-        let rowView = NSStackView(views: [labels, spacer, state])
+        state.font = NSFont.systemFont(ofSize: 10, weight: .semibold)
+        state.textColor = .controlAccentColor
+        let rowView = NSStackView(views: [icon, labels, spacer, state])
         rowView.orientation = .horizontal
         rowView.alignment = .centerY
         rowView.distribution = .fill
-        return rowView
+        rowView.spacing = 9
+        let cell = NSTableCellView()
+        rowView.translatesAutoresizingMaskIntoConstraints = false
+        cell.addSubview(rowView)
+        NSLayoutConstraint.activate([
+            rowView.leadingAnchor.constraint(equalTo: cell.leadingAnchor, constant: 8),
+            rowView.trailingAnchor.constraint(equalTo: cell.trailingAnchor, constant: -8),
+            rowView.centerYAnchor.constraint(equalTo: cell.centerYAnchor),
+        ])
+        return cell
     }
 
     func tableViewSelectionDidChange(_ notification: Notification) { self.updateButtonState() }
+
+    @objc private func changeLanguage(_ sender: NSPopUpButton) {
+        guard AppLanguage.allCases.indices.contains(sender.indexOfSelectedItem) else { return }
+        self.preferences.language = AppLanguage.allCases[sender.indexOfSelectedItem]
+        self.applyLocalization()
+        self.reloadState()
+    }
 
     @objc private func changeAppearance(_ sender: NSSegmentedControl) {
         guard AppearanceMode.allCases.indices.contains(sender.selectedSegment) else { return }
@@ -287,6 +410,14 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
                 title: "Unable to Change Login Setting",
                 message: "Move Codex Duo to Applications and try again.\n\n\(error.localizedDescription)")
         }
+    }
+
+    @objc private func changeAutoActivation(_ sender: NSButton) {
+        self.preferences.autoActivateRefreshedAccounts = sender.state == .on
+        self.statusLabel.stringValue = sender.state == .on
+            ? "Weekly quota activation enabled"
+            : "Weekly quota activation disabled"
+        if sender.state == .on { self.onRefreshRequested() }
     }
 
     @objc private func addAccount(_ sender: Any?) {
@@ -312,7 +443,7 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
         guard alert.runModal() == .alertFirstButtonReturn else { return }
         let alias = field.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
         self.performAccountTask(status: "Updating alias…") {
-            self.service.setAlias(accountKey: account.accountKey, alias: alias.isEmpty ? nil : alias)
+            self.service.setAlias(selector: account.codexAuthSelector, alias: alias.isEmpty ? nil : alias)
         }
     }
 
@@ -326,7 +457,7 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
         alert.addButton(withTitle: "Cancel")
         guard alert.runModal() == .alertFirstButtonReturn else { return }
         self.performAccountTask(status: "Removing account…") {
-            self.service.removeAccount(accountKey: account.accountKey)
+            self.service.removeAccount(selector: account.codexAuthSelector)
         }
     }
 

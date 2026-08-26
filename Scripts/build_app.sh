@@ -14,6 +14,7 @@ swiftc \
   -framework AppKit \
   -framework Foundation \
   -framework ServiceManagement \
+  -framework SystemConfiguration \
   "$project_dir"/Sources/CodexDuo/*.swift \
   -o "$binary_dir/CodexDuo"
 

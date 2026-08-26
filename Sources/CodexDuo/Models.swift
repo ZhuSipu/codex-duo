@@ -35,6 +35,52 @@ struct CodexRegistry: Decodable {
         return self.menuAccounts.first { $0.accountKey == accountKey }
     }
 
+    func replacingActiveUsage(with snapshot: UsageSnapshot, observedAt: Date) -> CodexRegistry {
+        guard let activeAccountKey else { return self }
+        return self.replacingUsage(
+            for: activeAccountKey,
+            with: snapshot,
+            observedAt: observedAt)
+    }
+
+    func replacingUsage(for accountKey: String, with snapshot: UsageSnapshot, observedAt: Date) -> CodexRegistry {
+        let updated = self.accounts.map { account in
+            guard account.accountKey == accountKey else { return account }
+            return CodexAccount(
+                accountKey: account.accountKey,
+                email: account.email,
+                alias: account.alias,
+                plan: account.plan,
+                lastUsage: snapshot,
+                lastUsageAt: Int64(observedAt.timeIntervalSince1970))
+        }
+        return CodexRegistry(schemaVersion: self.schemaVersion, activeAccountKey: activeAccountKey, accounts: updated)
+    }
+
+    func mergingLocalUsage(_ samplesByAccount: [String: LocalUsageSample]) -> CodexRegistry {
+        samplesByAccount.reduce(self) { registry, entry in
+            guard let account = registry.accounts.first(where: { $0.accountKey == entry.key }),
+                  account.acceptsLocalUsage(entry.value)
+            else { return registry }
+            return registry.replacingUsage(
+                for: entry.key,
+                with: entry.value.snapshot,
+                observedAt: entry.value.observedAt)
+        }
+    }
+
+    func uniqueAccountKey(matching sample: LocalUsageSample) -> String? {
+        guard let localReset = sample.snapshot.weekly?.resetsAt else { return nil }
+        let candidates = self.accounts.compactMap { account -> (String, TimeInterval)? in
+            guard let cachedReset = account.lastUsage?.weekly?.resetsAt else { return nil }
+            let distance = abs(cachedReset - localReset)
+            return distance <= 86_400 ? (account.accountKey, distance) : nil
+        }.sorted { $0.1 < $1.1 }
+        guard let best = candidates.first else { return nil }
+        if candidates.count > 1, candidates[1].1 - best.1 < 3_600 { return nil }
+        return best.0
+    }
+
     static func preview(accountCount: Int) -> CodexRegistry {
         let count = max(1, min(Self.maximumSupportedAccounts, accountCount))
         let accounts = (0..<count).map { index in
@@ -81,15 +127,54 @@ struct CodexAccount: Decodable {
         return cleanedAlias?.isEmpty == false ? cleanedAlias! : self.email
     }
 
+    var codexAuthSelector: String { self.displayName }
+
     var compactName: String {
         if let alias = self.alias?.trimmingCharacters(in: .whitespacesAndNewlines), !alias.isEmpty {
             return String(alias.prefix(1)).uppercased()
         }
         return String(self.email.prefix(1)).uppercased()
     }
+
+    func acceptsLocalUsage(_ sample: LocalUsageSample) -> Bool {
+        guard sample.observedAt.timeIntervalSince1970 > TimeInterval(self.lastUsageAt ?? 0),
+              let cachedReset = self.lastUsage?.weekly?.resetsAt,
+              let localReset = sample.snapshot.weekly?.resetsAt
+        else { return false }
+        return abs(cachedReset - localReset) <= 86_400
+    }
+
+    func usageAgeText(now: Date = Date()) -> String? {
+        guard self.lastUsage != nil, let lastUsageAt = self.lastUsageAt else { return nil }
+        let seconds = max(0, Int(now.timeIntervalSince1970) - Int(lastUsageAt))
+        guard seconds >= 900 else { return nil }
+        if seconds < 3_600 { return "\(seconds / 60)M OLD" }
+        if seconds < 86_400 { return "\(seconds / 3_600)H OLD" }
+        return "\(seconds / 86_400)D OLD"
+    }
+
+    func weeklyRefreshBoundary(comparedTo previous: CodexAccount?, now: Date = Date()) -> TimeInterval? {
+        guard let current = self.lastUsage?.weekly,
+              let currentReset = current.resetsAt
+        else { return nil }
+
+        let nowSeconds = now.timeIntervalSince1970
+        if currentReset <= nowSeconds { return currentReset }
+        if current.remainingPercent(now: now) == 100 {
+            let duration = TimeInterval((current.windowMinutes ?? 10_080) * 60)
+            return currentReset - duration
+        }
+
+        guard let previousWindow = previous?.lastUsage?.weekly,
+              let previousReset = previousWindow.resetsAt,
+              previousReset <= nowSeconds,
+              currentReset > previousReset
+        else { return nil }
+        return previousReset
+    }
 }
 
-struct UsageSnapshot: Decodable {
+struct UsageSnapshot: Codable {
     let primary: RateLimitWindow?
     let secondary: RateLimitWindow?
 
@@ -103,7 +188,7 @@ struct UsageSnapshot: Decodable {
     var weekly: RateLimitWindow? { self.window(minutes: 10_080) }
 }
 
-struct RateLimitWindow: Decodable {
+struct RateLimitWindow: Codable {
     let usedPercent: Double
     let windowMinutes: Int?
     let resetsAt: TimeInterval?
@@ -124,6 +209,7 @@ struct RateLimitWindow: Decodable {
         let seconds = max(0, Int(ceil(resetsAt - now.timeIntervalSince1970)))
         if seconds == 0 { return "now" }
         let totalMinutes = max(1, Int(ceil(Double(seconds) / 60.0)))
+
         let days = totalMinutes / 1_440
         let hours = (totalMinutes % 1_440) / 60
         let minutes = totalMinutes % 60
@@ -137,5 +223,22 @@ struct RateLimitWindow: Decodable {
             return minutes > 0 ? "\(hours)h \(minutes)min" : "\(hours)h"
         }
         return "\(minutes)min"
+    }
+
+    func displayResetText(activationStart: Date?, now: Date = Date()) -> String? {
+        guard self.windowMinutes == 10_080, self.remainingPercent(now: now) == 100 else {
+            return self.resetText(now: now)
+        }
+        if let activationStart {
+            let anchoredReset = activationStart.addingTimeInterval(604_800).timeIntervalSince1970
+            if anchoredReset > now.timeIntervalSince1970 {
+                let anchoredWindow = RateLimitWindow(
+                    usedPercent: self.usedPercent,
+                    windowMinutes: self.windowMinutes,
+                    resetsAt: anchoredReset)
+                return anchoredWindow.resetText(now: now)
+            }
+        }
+        return "7d"
     }
 }

@@ -26,32 +26,8 @@ jobs:
           name: macos-release
           path: dist/*
 
-  windows:
-    runs-on: windows-2022
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: "8.0.x"
-      - name: Verify version tag
-        shell: pwsh
-        run: |
-          [xml]$project = Get-Content Windows/CodexDuo.Windows/CodexDuo.Windows.csproj
-          if ("v$($project.Project.PropertyGroup.Version)" -ne $env:GITHUB_REF_NAME) { throw "Tag and Windows version differ" }
-      - name: Test
-        run: dotnet run --project Windows/CodexDuo.Windows.Tests/CodexDuo.Windows.Tests.csproj -c Release
-      - name: Install Inno Setup
-        run: choco install innosetup --no-progress -y
-      - name: Package
-        shell: pwsh
-        run: ./Scripts/package_windows.ps1
-      - uses: actions/upload-artifact@v4
-        with:
-          name: windows-release
-          path: dist/*
-
   publish:
-    needs: [macos, windows]
+    needs: [macos]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4

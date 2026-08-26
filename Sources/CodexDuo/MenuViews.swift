@@ -16,22 +16,62 @@ private extension NSAppearance {
 }
 
 final class AccountOverviewView: NSView {
-    init(registry: CodexRegistry?, isWorking: Bool, errorMessage: String?, target: AnyObject, action: Selector) {
+    private let rows = NSStackView()
+    private let resetTextProvider: (CodexAccount, RateLimitWindow) -> String?
+    private weak var actionTarget: AnyObject?
+    private let rowAction: Selector
+    private var presentationSignature: String?
+
+    init(
+        registry: CodexRegistry?,
+        isWorking: Bool,
+        errorMessage: String?,
+        resetTextProvider: @escaping (CodexAccount, RateLimitWindow) -> String?,
+        target: AnyObject,
+        action: Selector)
+    {
+        self.resetTextProvider = resetTextProvider
+        self.actionTarget = target
+        self.rowAction = action
         let accountCount = max(1, registry?.menuAccounts.count ?? 0)
         super.init(frame: NSRect(x: 0, y: 0, width: panelWidth, height: CGFloat(8 + accountCount * 60)))
 
-        let rows = NSStackView()
-        rows.orientation = .vertical
-        rows.alignment = .centerX
-        rows.spacing = 0
-        rows.translatesAutoresizingMaskIntoConstraints = false
-        addSubview(rows)
+        self.rows.orientation = .vertical
+        self.rows.alignment = .centerX
+        self.rows.spacing = 0
+        self.rows.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(self.rows)
+
+        NSLayoutConstraint.activate([
+            self.rows.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 8),
+            self.rows.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -8),
+            self.rows.topAnchor.constraint(equalTo: topAnchor, constant: 4),
+            self.rows.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -4),
+        ])
+        self.update(registry: registry, isWorking: isWorking, errorMessage: errorMessage)
+    }
+
+    func update(registry: CodexRegistry?, isWorking: Bool, errorMessage: String?) {
+        let signature = self.makePresentationSignature(
+            registry: registry,
+            isWorking: isWorking,
+            errorMessage: errorMessage)
+        guard signature != self.presentationSignature else { return }
+        self.presentationSignature = signature
+
+        for view in self.rows.arrangedSubviews {
+            self.rows.removeArrangedSubview(view)
+            view.removeFromSuperview()
+        }
+        let accountCount = max(1, registry?.menuAccounts.count ?? 0)
+        self.setFrameSize(NSSize(width: panelWidth, height: CGFloat(8 + accountCount * 60)))
 
         if let registry, !registry.menuAccounts.isEmpty {
+            let target = self.actionTarget ?? self
             for (index, account) in registry.menuAccounts.enumerated() {
                 if index > 0 {
                     let divider = HairlineView()
-                    rows.addArrangedSubview(divider)
+                    self.rows.addArrangedSubview(divider)
                     divider.widthAnchor.constraint(equalToConstant: panelWidth - 48).isActive = true
                     divider.heightAnchor.constraint(equalToConstant: 0.5).isActive = true
                 }
@@ -40,9 +80,10 @@ final class AccountOverviewView: NSView {
                     account: account,
                     active: active,
                     canSwitch: !active && !isWorking,
+                    resetTextProvider: self.resetTextProvider,
                     target: target,
-                    action: action)
-                rows.addArrangedSubview(row)
+                    action: self.rowAction)
+                self.rows.addArrangedSubview(row)
                 row.widthAnchor.constraint(equalToConstant: panelWidth - 16).isActive = true
                 row.heightAnchor.constraint(equalToConstant: 59.5).isActive = true
             }
@@ -50,15 +91,23 @@ final class AccountOverviewView: NSView {
             let unavailable = NSTextField(labelWithString: errorMessage ?? "Account data is unavailable")
             unavailable.font = NSFont.systemFont(ofSize: 11.5, weight: .medium)
             unavailable.textColor = .secondaryLabelColor
-            rows.addArrangedSubview(unavailable)
+            self.rows.addArrangedSubview(unavailable)
         }
+    }
 
-        NSLayoutConstraint.activate([
-            rows.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 8),
-            rows.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -8),
-            rows.topAnchor.constraint(equalTo: topAnchor, constant: 4),
-            rows.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -4),
-        ])
+    private func makePresentationSignature(
+        registry: CodexRegistry?,
+        isWorking: Bool,
+        errorMessage: String?) -> String
+    {
+        let accounts = registry?.menuAccounts.map { account in
+            let windows = [account.lastUsage?.fiveHour, account.lastUsage?.weekly].map { window in
+                guard let window else { return "-" }
+                return "\(window.usedPercent)|\(window.windowMinutes ?? -1)|\(window.resetsAt ?? -1)|\(self.resetTextProvider(account, window) ?? "")"
+            }.joined(separator: ",")
+            return "\(account.accountKey)|\(account.displayName)|\(account.plan ?? "")|\(account.usageAgeText() ?? "")|\(windows)"
+        }.joined(separator: ";") ?? ""
+        return "\(registry?.activeAccountKey ?? "")|\(isWorking)|\(errorMessage ?? "")|\(accounts)"
     }
 
     @available(*, unavailable)
@@ -71,9 +120,14 @@ private final class HairlineView: NSView {
         self.wantsLayer = true
         self.updateColor()
     }
+    override func viewDidMoveToWindow() { super.viewDidMoveToWindow(); self.updateColor() }
     override func viewDidChangeEffectiveAppearance() { super.viewDidChangeEffectiveAppearance(); self.updateColor() }
     private func updateColor() {
-        self.layer?.backgroundColor = NSColor.labelColor.withAlphaComponent(self.effectiveAppearance.codexDuoIsDark ? 0.08 : 0.06).cgColor
+        let dark = (self.window?.effectiveAppearance ?? self.effectiveAppearance).codexDuoIsDark
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        self.layer?.backgroundColor = NSColor.labelColor.withAlphaComponent(dark ? 0.08 : 0.06).cgColor
+        CATransaction.commit()
     }
     @available(*, unavailable) required init?(coder: NSCoder) { nil }
 }
@@ -86,7 +140,14 @@ final class AccountRowButton: NSButton {
     private var trackingAreaReference: NSTrackingArea?
     private var isCommitting = false
 
-    init(account: CodexAccount, active: Bool, canSwitch: Bool, target: AnyObject, action: Selector) {
+    init(
+        account: CodexAccount,
+        active: Bool,
+        canSwitch: Bool,
+        resetTextProvider: (CodexAccount, RateLimitWindow) -> String?,
+        target: AnyObject,
+        action: Selector)
+    {
         self.accountKey = account.accountKey
         self.canSwitch = canSwitch
         super.init(frame: .zero)
@@ -126,6 +187,11 @@ final class AccountRowButton: NSButton {
         let identitySpacer = NSView()
         identitySpacer.setContentHuggingPriority(.defaultLow, for: .horizontal)
         var identityViews: [NSView] = [identity, plan, identitySpacer]
+        if let age = account.usageAgeText() {
+            let freshness = PlanBadgeView(text: age)
+            freshness.setContentHuggingPriority(.required, for: .horizontal)
+            identityViews.insert(freshness, at: 2)
+        }
         if canSwitch {
             let chevron = NSImageView(image: NSImage(systemSymbolName: "chevron.right", accessibilityDescription: "Switch") ?? NSImage())
             chevron.contentTintColor = .quaternaryLabelColor
@@ -140,9 +206,13 @@ final class AccountRowButton: NSButton {
         identityRow.distribution = .fill
 
         var availableMeters: [NSView] = []
-        if let fiveHour = account.lastUsage?.fiveHour { availableMeters.append(UsageMeterView(label: "5H", window: fiveHour)) }
-        if let weekly = account.lastUsage?.weekly { availableMeters.append(UsageMeterView(label: "WEEK", window: weekly)) }
-        if availableMeters.isEmpty { availableMeters.append(UsageMeterView(label: "USAGE", window: nil)) }
+        if let fiveHour = account.lastUsage?.fiveHour {
+            availableMeters.append(UsageMeterView(label: "5H", window: fiveHour, resetText: resetTextProvider(account, fiveHour)))
+        }
+        if let weekly = account.lastUsage?.weekly {
+            availableMeters.append(UsageMeterView(label: "WEEK", window: weekly, resetText: resetTextProvider(account, weekly)))
+        }
+        if availableMeters.isEmpty { availableMeters.append(UsageMeterView(label: "USAGE", window: nil, resetText: nil)) }
         let meters = NSStackView(views: availableMeters)
         meters.orientation = .horizontal
         meters.alignment = .top
@@ -323,20 +393,24 @@ private final class PlanBadgeView: NSView {
         ])
         self.updateGlass()
     }
+    override func viewDidMoveToWindow() { super.viewDidMoveToWindow(); self.updateGlass() }
     override func viewDidChangeEffectiveAppearance() { super.viewDidChangeEffectiveAppearance(); self.updateGlass() }
     private func updateGlass() {
-        let dark = self.effectiveAppearance.codexDuoIsDark
+        let dark = (self.window?.effectiveAppearance ?? self.effectiveAppearance).codexDuoIsDark
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
         self.layer?.backgroundColor = NSColor.labelColor.withAlphaComponent(dark ? 0.06 : 0.035).cgColor
         self.layer?.borderColor = NSColor.white.withAlphaComponent(dark ? 0.11 : 0.24).cgColor
+        CATransaction.commit()
     }
     @available(*, unavailable) required init?(coder: NSCoder) { nil }
 }
 
 private final class UsageMeterView: NSView {
-    init(label: String, window: RateLimitWindow?) {
+    init(label: String, window: RateLimitWindow?, resetText: String?) {
         super.init(frame: .zero)
         let remaining = window?.remainingPercent()
-        let reset = window?.resetText()
+        let reset = resetText
         let name = NSTextField(labelWithString: label)
         name.font = NSFont.systemFont(ofSize: 8.5, weight: .semibold)
         name.textColor = .tertiaryLabelColor
@@ -396,14 +470,21 @@ private final class MeterTrackView: NSView {
     }
     override func layout() {
         super.layout()
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
         self.fill.frame = CGRect(x: 0, y: 0, width: self.bounds.width * CGFloat(self.remaining ?? 0) / 100, height: self.bounds.height)
+        CATransaction.commit()
     }
+    override func viewDidMoveToWindow() { super.viewDidMoveToWindow(); self.updateColors() }
     override func viewDidChangeEffectiveAppearance() { super.viewDidChangeEffectiveAppearance(); self.updateColors() }
     private func updateColors() {
-        let dark = self.effectiveAppearance.codexDuoIsDark
+        let dark = (self.window?.effectiveAppearance ?? self.effectiveAppearance).codexDuoIsDark
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
         self.layer?.backgroundColor = NSColor.labelColor.withAlphaComponent(dark ? 0.10 : 0.055).cgColor
         let low = (self.remaining ?? 100) < 40
         self.fill.backgroundColor = NSColor.labelColor.withAlphaComponent(low ? (dark ? 0.54 : 0.42) : (dark ? 0.34 : 0.25)).cgColor
+        CATransaction.commit()
     }
     @available(*, unavailable) required init?(coder: NSCoder) { nil }
 }

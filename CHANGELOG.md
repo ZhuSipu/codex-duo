@@ -2,21 +2,30 @@
 
 All notable changes to Codex Duo are documented here.
 
+## 0.9.0 - 2026-08-26
+
+- Treat an untouched 100% weekly quota as a waiting seven-day window instead of counting down from an unanchored API timestamp.
+- Add default-enabled macOS activation for refreshed weekly accounts with one ephemeral Codex message, duplicate prevention, an hourly failure cooldown, and an explicit opt-out setting.
+- Bound activation commands and UI state with timeouts, discard subprocess output to prevent pipe stalls, and use a low-reasoning fast model for the activation message.
+- Prefer recent local Codex rate-limit events for every uniquely matching macOS account when `codex-auth` times out, persist verified inactive-account samples across restarts, scan the full weekly window, and reject ambiguous or older values.
+- Show age badges for values older than 15 minutes and preserve logical `TimedOut` refresh warnings across background registry polling.
+- Refresh an already-open macOS menu in place when local rate-limit events add or update a 5-hour or weekly window, with polling timers registered for menu-tracking run-loop modes.
+- Pass enabled macOS per-user system proxy settings to `codex-auth` without overriding existing proxy environment variables, restoring API refresh for inactive accounts behind explicit HTTP, HTTPS, or SOCKS proxies.
+- Keep open-menu progress bars stable by skipping unchanged row reconstruction, resolving dynamic colors after attachment to the menu window, and disabling implicit layer animations during refresh.
+- Redesign the macOS settings window with compact grouped cards, consistent alignment, clearer account states, and consolidated account actions.
+- Add instant settings-page localization for the system language and eight common languages.
+- Focus the project and automated release pipeline on the native macOS app.
+- Fixed account switching, renaming, and removal by passing an alias or email accepted by `codex-auth`, while still verifying switches against the internal account key.
+- Removed account-switch confirmation and failure dialogs; selecting an account now immediately restarts Codex and reports errors in the menu.
+- Added a direct restart fallback that terminates Codex if it does not close promptly.
+
 ## 0.8.1 - 2026-08-19
 
 - Fixed account removal by using selector mode without the incompatible `--skip-api` flag.
 - Switched remove, rename, and account switching commands to unique account keys instead of potentially ambiguous emails.
 - Removed the macOS forced `pkill` fallback; an account remains unchanged if Codex does not quit cleanly.
-- Added an explicit restart warning before account switches on macOS and Windows.
+- Added an explicit restart warning before account switches.
 - Added command-contract regression tests for both platforms.
-
-## 0.8.0 - 2026-08-19
-
-- Added a native Windows 10/11 tray app with account, appearance, refresh, startup, settings, and quit controls.
-- Added safe Codex desktop restart through the Windows Start Apps registry without force-killing active Codex work.
-- Added discovery for native, npm `.cmd`, and PATH-installed `codex-auth` executables on Windows.
-- Added first-run dependency setup, a per-user Inno Setup installer, and a self-contained portable ZIP.
-- Added Windows model tests, WPF compilation in CI, and parallel macOS/Windows tagged releases.
 
 ## 0.7.0 - 2026-08-19
 
