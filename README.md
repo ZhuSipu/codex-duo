@@ -4,6 +4,8 @@ Codex Duo is a compact native macOS menu-bar app for monitoring and switching be
 
 It reads the account registry maintained by [`codex-auth`](https://github.com/Loongphy/codex-auth), displays available usage windows, and switches the official Codex App by selecting an account row. Appearance, refresh frequency, startup, and accounts are managed from a native settings window.
 
+Shared macOS and Windows behavior is defined in [`docs/feature-spec.md`](docs/feature-spec.md). The Windows implementation is planned and will be developed independently from that specification.
+
 ## Features
 
 - Native AppKit menu-bar interface.
