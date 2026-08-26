@@ -22,4 +22,7 @@
   <ItemGroup>
     <ProjectReference Include="..\CodexDuo.Windows.Core\CodexDuo.Windows.Core.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="..\CodexDuo.Windows\TrayWindow.xaml" Link="Fixtures\TrayWindow.xaml" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>

@@ -66,13 +66,13 @@
                         <Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="10" /><ColumnDefinition /></Grid.ColumnDefinitions>
                         <StackPanel Visibility="{Binding HasFiveHour, Converter={StaticResource BoolVisibility}}">
                           <DockPanel><TextBlock Text="{Binding FiveHourLabel}" Style="{StaticResource UsageLabel}" /><TextBlock Text="{Binding FiveHourReset}" DockPanel.Dock="Right" Style="{StaticResource UsageLabel}" /></DockPanel>
-                          <ProgressBar Value="{Binding FiveHourRemaining}" Maximum="100" Height="5" Margin="0,6,0,3" Foreground="{DynamicResource AccentBrush}" Background="{DynamicResource BorderBrush}" BorderThickness="0" />
-                          <TextBlock FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}"><Run Text="{Binding FiveHourRemaining}" /><Run Text="% " /><Run Text="{Binding RemainingLabel}" /></TextBlock>
+                          <ProgressBar Value="{Binding FiveHourRemaining, Mode=OneWay}" Maximum="100" Height="5" Margin="0,6,0,3" Foreground="{DynamicResource AccentBrush}" Background="{DynamicResource BorderBrush}" BorderThickness="0" />
+                          <TextBlock FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}"><Run Text="{Binding FiveHourRemaining, Mode=OneWay}" /><Run Text="% " /><Run Text="{Binding RemainingLabel, Mode=OneWay}" /></TextBlock>
                         </StackPanel>
                         <StackPanel Grid.Column="2" Visibility="{Binding HasWeekly, Converter={StaticResource BoolVisibility}}">
                           <DockPanel><TextBlock Text="{Binding WeeklyLabel}" Style="{StaticResource UsageLabel}" /><TextBlock Text="{Binding WeeklyReset}" DockPanel.Dock="Right" Style="{StaticResource UsageLabel}" /></DockPanel>
-                          <ProgressBar Value="{Binding WeeklyRemaining}" Maximum="100" Height="5" Margin="0,6,0,3" Foreground="#FF19B6C9" Background="{DynamicResource BorderBrush}" BorderThickness="0" />
-                          <TextBlock FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}"><Run Text="{Binding WeeklyRemaining}" /><Run Text="% " /><Run Text="{Binding RemainingLabel}" /></TextBlock>
+                          <ProgressBar Value="{Binding WeeklyRemaining, Mode=OneWay}" Maximum="100" Height="5" Margin="0,6,0,3" Foreground="#FF19B6C9" Background="{DynamicResource BorderBrush}" BorderThickness="0" />
+                          <TextBlock FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}"><Run Text="{Binding WeeklyRemaining, Mode=OneWay}" /><Run Text="% " /><Run Text="{Binding RemainingLabel, Mode=OneWay}" /></TextBlock>
                         </StackPanel>
                       </Grid>
                     </StackPanel>
