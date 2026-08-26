@@ -2,6 +2,14 @@
 
 All notable changes to Codex Duo are documented here.
 
+## 1.0.0 - 2026-08-26
+
+- Add a new independent Windows implementation built from the shared behavior specification with .NET 8 and WPF.
+- Add a native system-tray account panel, manual and scheduled refresh, verified switching, account management, appearance, localization, startup, and quota activation.
+- Add safe Node-based discovery for `codex-auth` and Codex CLI commands without shell-interpolating account selectors.
+- Add a self-contained Windows portable build, per-user Inno Setup installer, optional Authenticode signing, SHA-256 checksums, Windows CI, and cross-platform release publishing.
+- Add Windows model and behavior tests for shared configuration defaults, account selection, quota semantics, stale ages, timeout handling, and activation bookkeeping.
+
 ## 0.9.0 - 2026-08-26
 
 - Treat an untouched 100% weekly quota as a waiting seven-day window instead of counting down from an unanchored API timestamp.

@@ -1,14 +1,15 @@
 # Codex Duo
 
-Codex Duo is a compact native macOS menu-bar app for monitoring and switching between up to ten Codex accounts.
+Codex Duo is a compact native macOS menu-bar and Windows system-tray app for monitoring and switching between up to ten Codex accounts.
 
 It reads the account registry maintained by [`codex-auth`](https://github.com/Loongphy/codex-auth), displays available usage windows, and switches the official Codex App by selecting an account row. Appearance, refresh frequency, startup, and accounts are managed from a native settings window.
 
-Shared macOS and Windows behavior is defined in [`docs/feature-spec.md`](docs/feature-spec.md). The Windows implementation is planned and will be developed independently from that specification.
+Shared macOS and Windows behavior is defined in [`docs/feature-spec.md`](docs/feature-spec.md). Each platform has an independent native implementation of that specification.
 
 ## Features
 
 - Native AppKit menu-bar interface.
+- Native .NET 8 WPF system-tray interface on Windows.
 - System-aware light and dark materials with restrained depth, highlights, and motion.
 - Compact weekly quota summary for the active account, with support for up to ten accounts.
 - Adaptive usage meters: only windows reported by `codex-auth` are shown.
@@ -16,7 +17,7 @@ Shared macOS and Windows behavior is defined in [`docs/feature-spec.md`](docs/fe
 - Live updates while the macOS menu remains open, including newly appearing usage windows.
 - Automatic 5-hour/weekly two-column layout if the 300-minute window returns in the future.
 - Reset countdowns with day, hour, and minute precision; a full weekly quota remains at `7d` until its first message anchors the window.
-- Optional macOS quota activation that switches to a refreshed weekly account and sends one ephemeral Codex message to anchor the next reset.
+- Optional quota activation that switches to a refreshed weekly account and sends one ephemeral Codex message to anchor the next reset.
 - Direct, confirmation-free account-row switching followed by a verified Codex App restart.
 - Native account setup for adding, renaming, removing, and refreshing up to ten accounts.
 - System, Light, and Dark appearance modes with improved light-mode hover feedback.
@@ -26,11 +27,20 @@ Shared macOS and Windows behavior is defined in [`docs/feature-spec.md`](docs/fe
 
 ## Requirements
 
+### macOS
+
 - macOS 14 or later.
 - Apple Silicon Mac for the release build.
 - Swift 5.10 command-line tools only when building from source.
 - The official Codex App.
 - [`codex-auth`](https://github.com/Loongphy/codex-auth) with one to ten configured accounts.
+
+### Windows
+
+- Windows 10 version 2004 or later, or Windows 11.
+- x64 processor for the current release package.
+- The official Codex App, Node.js, and [`codex-auth`](https://github.com/Loongphy/codex-auth).
+- .NET is bundled in the self-contained Windows release.
 
 Codex Duo detects a missing dependency and exposes the install command in Settings. To install it manually:
 
@@ -39,8 +49,11 @@ npm install -g @loongphy/codex-auth@next
 ```
 
 Codex Duo looks for `codex-auth` in `~/.local/bin`, `/opt/homebrew/bin`, and `/usr/local/bin`.
+On Windows it resolves the global npm packages for `codex-auth` and the Codex CLI and invokes their JavaScript entry points through Node.js.
 
 ## Download and install
+
+### macOS
 
 Download the DMG, open it, and drag **Codex Duo** to **Applications**. A ZIP is also provided.
 
@@ -48,12 +61,16 @@ The current personal build is ad-hoc signed, not Apple-notarized. On first launc
 
 On first launch with no configured accounts, Codex Duo opens Settings once. Use **Add Account…** to start the official Codex login flow in Terminal. Repeat for each account, then choose **Refresh Now**. Authentication remains owned by Codex and `codex-auth`; Codex Duo never asks for a password or displays a token.
 
+### Windows
+
+Download `Codex-Duo-1.0.0-Windows-x64-Setup.exe` for a per-user installation, or use the portable ZIP. The installer does not require administrator privileges and launch-at-login remains opt-in. Unsigned personal builds may show a Windows reputation warning; verify the published SHA-256 checksum before running them.
+
 ## Settings
 
 - **Appearance:** Follow System, Light, or Dark. Changes apply immediately.
 - **Language:** Follow the system language or choose English, Simplified Chinese, Traditional Chinese, Japanese, Korean, Spanish, French, or German.
 - **Automatic refresh:** Off or every 1, 2, 5, 10, or 15 minutes. Off keeps cached usage visible and disables API-backed refresh until Refresh Now is selected.
-- **Startup:** Register or unregister Codex Duo with macOS Login Items.
+- **Startup:** Register or unregister Codex Duo with macOS Login Items or the Windows per-user Run entry.
 - **Quota activation:** Enabled by default. A refreshed weekly account is selected automatically and receives one ephemeral activation message. Successful windows are recorded locally so they are activated only once; failed attempts wait one hour before retrying. Detection continues every two minutes when Automatic refresh is Off, and the option can be disabled explicitly.
 - **Accounts:** Add an account through Terminal, rename an alias, remove a selected account with confirmation, or refresh usage manually.
 
@@ -61,7 +78,7 @@ Click a non-current account row in the menu to switch immediately. Clicking the 
 
 ## Build from source
 
-From source:
+On macOS:
 
 ```shell
 git clone https://github.com/ZhuSipu/codex-duo.git
@@ -70,6 +87,15 @@ cd codex-duo
 ```
 
 The installer builds, ad-hoc signs, copies the app to `/Applications/Codex Duo.app`, and launches it. Set `CODEX_DUO_INSTALL_DIR` to use a different destination directory.
+
+On Windows with the .NET 8 SDK and Inno Setup 6:
+
+```powershell
+dotnet test Windows/CodexDuo.Windows.sln -c Release
+./Scripts/package_windows.ps1
+```
+
+Windows release files are written to `dist/`. Set `CODEX_DUO_SIGN_THUMBPRINT` and optionally `CODEX_DUO_TIMESTAMP_URL` to Authenticode-sign the executable and installer.
 
 ## Build and test
 
@@ -106,7 +132,7 @@ At the configured interval, the app runs `codex-auth list`. Selecting a non-acti
 1. asks the official Codex App to quit and waits up to ten seconds;
 2. runs `codex-auth switch <alias-or-email>`;
 3. verifies the active account key in the registry; and
-4. relaunches the Codex App through Launch Services.
+4. relaunches the Codex App through Launch Services on macOS or the packaged-app identifier on Windows.
 
 If Codex does not close promptly, Codex Duo terminates the desktop app before switching.
 

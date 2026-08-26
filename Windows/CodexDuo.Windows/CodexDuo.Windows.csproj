@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>CodexDuo</AssemblyName>
+    <RootNamespace>CodexDuo.Windows</RootNamespace>
+    <Version>1.0.0</Version>
+    <ApplicationIcon>Resources\CodexDuo.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <StartupObject>CodexDuo.Windows.App</StartupObject>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\CodexDuo.Windows.Core\CodexDuo.Windows.Core.csproj" />
+    <PackageReference Include="H.NotifyIcon.Wpf" Version="2.3.2" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Resources\CodexDuo.ico" />
+    <Resource Include="Resources\CodexDuo.png" />
+  </ItemGroup>
+</Project>

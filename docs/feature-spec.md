@@ -207,21 +207,21 @@ Status values are **Implemented**, **Planned**, **Partial**, or **Not applicable
 
 | Capability | macOS | Windows | Notes |
 | --- | --- | --- | --- |
-| Native menu-bar/system-tray shell | Implemented | Planned | AppKit menu bar; WPF tray planned. |
-| Registry loading and account display | Implemented | Planned | Maximum ten displayed accounts, active account preserved. |
-| Five-hour and weekly usage display | Implemented | Planned | Missing windows are omitted. |
-| Stale-age and reset countdowns | Implemented | Planned | Shared semantics are defined in section 6. |
-| Manual and scheduled refresh | Implemented | Planned | Delegated to `codex-auth`. |
-| Verified account switching and Codex restart | Implemented | Planned | Native process control differs. |
-| Add, rename, and remove account | Implemented | Planned | Delegated to `codex-auth`. |
-| Appearance modes | Implemented | Planned | Native rendering differs. |
-| Nine language choices including System | Implemented | Planned | Current visible macOS settings strings are localized. |
-| Launch at login | Implemented | Planned | Native registration differs. |
-| Weekly quota activation | Implemented | Planned | Ephemeral read-only activation. |
+| Native menu-bar/system-tray shell | Implemented | Implemented | AppKit menu bar; .NET 8 WPF system tray. |
+| Registry loading and account display | Implemented | Implemented | Maximum ten displayed accounts, active account preserved. |
+| Five-hour and weekly usage display | Implemented | Implemented | Missing windows are omitted. |
+| Stale-age and reset countdowns | Implemented | Implemented | Shared semantics are covered by platform tests. |
+| Manual and scheduled refresh | Implemented | Implemented | Delegated to `codex-auth`. |
+| Verified account switching and Codex restart | Implemented | Implemented | Windows uses bounded native process control and the packaged-app identifier. |
+| Add, rename, and remove account | Implemented | Implemented | Delegated to `codex-auth`. |
+| Appearance modes | Implemented | Implemented | Native rendering differs. |
+| Nine language choices including System | Implemented | Implemented | Both settings surfaces expose the same choices and system fallback. |
+| Launch at login | Implemented | Implemented | Windows uses a verified per-user Run entry. |
+| Weekly quota activation | Implemented | Implemented | Ephemeral read-only activation with cooldown and success bookkeeping. |
 | Verified local usage reconciliation | Implemented | Planned | Windows source and feasibility must be designed independently. |
 | macOS build/test CI | Implemented | Not applicable | Independent GitHub Actions job. |
-| Windows build/test CI | Not applicable | Planned | Add with the new Windows implementation. |
-| Installer and release packaging | Implemented | Planned | Platform-specific artifacts and signing. |
+| Windows build/test CI | Not applicable | Implemented | Independent .NET build, test, and self-contained publish job. |
+| Installer and release packaging | Implemented | Implemented | Windows provides portable ZIP, per-user installer, checksums, and optional Authenticode signing. |
 | Automatic application updates | Planned | Planned | Not present in the current product. |
 
 ## 14. Cross-platform acceptance criteria

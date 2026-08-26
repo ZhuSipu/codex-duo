@@ -12,3 +12,7 @@ if [[ "${1:-}" == "--all" ]]; then
 fi
 
 find "$project_dir" -name .DS_Store -type f -delete
+
+if [[ -d "$project_dir/Windows" ]]; then
+  find "$project_dir/Windows" -type d \( -name bin -o -name obj \) -prune -exec rm -rf {} +
+fi

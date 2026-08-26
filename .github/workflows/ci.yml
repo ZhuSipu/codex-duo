@@ -17,3 +17,20 @@ jobs:
           app_path=$(./Scripts/build_app.sh)
           codesign --verify --deep --strict "$app_path"
           test -x "$app_path/Contents/MacOS/CodexDuo"
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - name: Restore
+        run: dotnet restore Windows/CodexDuo.Windows.sln
+      - name: Test
+        run: dotnet test Windows/CodexDuo.Windows.sln -c Release --no-restore --nologo
+      - name: Publish and verify app
+        shell: pwsh
+        run: |
+          dotnet publish Windows/CodexDuo.Windows/CodexDuo.Windows.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:PublishReadyToRun=true -p:DebugType=None -o build/windows-ci --nologo
+          if (-not (Test-Path -LiteralPath build/windows-ci/CodexDuo.exe)) { throw "CodexDuo.exe was not produced." }
