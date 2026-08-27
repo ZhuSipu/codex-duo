@@ -58,6 +58,8 @@ public sealed class ProcessCommandRunner : ICommandRunner
             startInfo.ArgumentList.Add(argument);
         }
 
+        WindowsProxyEnvironment.ApplyTo(startInfo.Environment);
+
         using var process = new Process { StartInfo = startInfo };
         try
         {
@@ -167,7 +169,8 @@ public static class CodexAuthCommands
 {
     public const string ActivationPrompt = "This is an automated quota-window activation from Codex Duo. Reply with OK only and do not use tools.";
 
-    public static IReadOnlyList<string> SwitchAccount(string selector) => ["switch", selector];
+    public static IReadOnlyList<string> SwitchAccount(string accountKey) => ["switch", accountKey, "--json"];
+    public static IReadOnlyList<string> LegacySwitchAccount(string selector) => ["switch", selector];
     public static IReadOnlyList<string> SetAlias(string selector, string? alias) =>
         string.IsNullOrWhiteSpace(alias) ? ["alias", "clear", selector] : ["alias", "set", selector, alias.Trim()];
     public static IReadOnlyList<string> RemoveAccount(string selector) => ["remove", selector];
