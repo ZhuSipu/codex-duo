@@ -103,6 +103,9 @@ public sealed class XamlBindingTests
 
         var window = Assert.Single(document.Elements(presentation + "Window"));
         Assert.Equal("520", (string?)window.Attribute("Width"));
+        Assert.Equal("580", (string?)window.Attribute("Height"));
+        Assert.DoesNotContain(document.Descendants(), element =>
+            (string?)element.Attribute(x + "Name") == "PageTitle");
         var scrollViewer = Assert.Single(document.Descendants(presentation + "ScrollViewer"));
         Assert.All(surfaceNames, name => Assert.Contains(scrollViewer.Descendants(presentation + "Border"), element =>
             (string?)element.Attribute(x + "Name") == name));
