@@ -4,10 +4,35 @@ using System.Windows;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Interop;
+using System.Windows.Markup;
 using System.Windows.Media;
+using CodexDuo.Windows.Core;
 using Microsoft.Win32;
 
 namespace CodexDuo.Windows;
+
+public static class TypographyManager
+{
+    public static void Apply(string language)
+    {
+        var (fontFamily, languageTag) = Localizer.ResolveLanguage(language) switch
+        {
+            "zh-Hans" => ("Microsoft YaHei UI", "zh-CN"),
+            "zh-Hant" => ("Microsoft JhengHei UI", "zh-TW"),
+            "ja" => ("Yu Gothic UI", "ja-JP"),
+            "ko" => ("Malgun Gothic", "ko-KR"),
+            "es" => ("Segoe UI Variable Text, Segoe UI", "es-ES"),
+            "fr" => ("Segoe UI Variable Text, Segoe UI", "fr-FR"),
+            "de" => ("Segoe UI Variable Text, Segoe UI", "de-DE"),
+            _ => ("Segoe UI Variable Text, Segoe UI", "en-US"),
+        };
+
+        var resources = Application.Current?.Resources;
+        if (resources is null) return;
+        resources["InterfaceFontFamily"] = new FontFamily(fontFamily);
+        resources["InterfaceLanguage"] = XmlLanguage.GetLanguage(languageTag);
+    }
+}
 
 public sealed class AsyncCommand(Func<Task> execute, Func<bool>? canExecute = null) : ICommand
 {
@@ -51,19 +76,21 @@ public static class ThemeManager
 {
     private const int UseImmersiveDarkMode = 20;
     private const int UseImmersiveDarkModeBefore20H1 = 19;
+    private const int WindowCornerPreference = 33;
+    private const int RoundWindowCorners = 2;
 
     public static void Apply(string mode)
     {
         var dark = mode == "dark" || mode == "system" && SystemUsesDarkTheme();
         Set("WindowBackgroundBrush", dark ? "#FF1E1E20" : "#FFF5F5F7");
-        Set("CardBrush", dark ? "#FF29292B" : "#FFFFFFFF");
+        Set("CardBrush", dark ? "#FF202022" : "#FFFFFFFF");
         Set("ElevatedBrush", dark ? "#FF343437" : "#FFFFFFFF");
         Set("PrimaryTextBrush", dark ? "#F2FFFFFF" : "#E8000000");
         Set("SecondaryTextBrush", dark ? "#A8FFFFFF" : "#92000000");
         Set("TertiaryTextBrush", dark ? "#72FFFFFF" : "#65000000");
         Set("QuaternaryTextBrush", dark ? "#45FFFFFF" : "#40000000");
         Set("BorderBrush", dark ? "#16FFFFFF" : "#14000000");
-        Set("StrongBorderBrush", dark ? "#2AFFFFFF" : "#22000000");
+        Set("StrongBorderBrush", dark ? "#36FFFFFF" : "#22000000");
         Set("HoverBrush", dark ? "#12FFFFFF" : "#0D000000");
         Set("PressedBrush", dark ? "#20FFFFFF" : "#17000000");
         Set("TrackBrush", dark ? "#18FFFFFF" : "#10000000");
@@ -86,6 +113,8 @@ public static class ThemeManager
         {
             _ = DwmSetWindowAttribute(handle, UseImmersiveDarkModeBefore20H1, ref enabled, sizeof(int));
         }
+        var corners = RoundWindowCorners;
+        _ = DwmSetWindowAttribute(handle, WindowCornerPreference, ref corners, sizeof(int));
     }
 
     private static bool SystemUsesDarkTheme()

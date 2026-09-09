@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Diagnostics;
 using CodexDuo.Windows.Core;
 using Microsoft.VisualBasic;
 
@@ -70,25 +71,35 @@ public partial class SettingsWindow : Window
         LightAppearance.IsChecked = viewModel.Settings.Appearance == "light";
         DarkAppearance.IsChecked = viewModel.Settings.Appearance == "dark";
         StartupCheck.IsChecked = viewModel.Settings.LaunchAtLogin;
-        ActivationCheck.IsChecked = viewModel.Settings.AutoActivateRefreshedAccounts;
     }
 
     private void ApplyText()
     {
         var text = viewModel.Text;
         Title = $"Codex Duo {text["settings"]}";
+        PageTitle.Text = text["settings"];
         GeneralHeading.Text = text["general"];
         AccountsHeading.Text = text["accounts"];
         AppearanceLabel.Text = text["appearance"];
         LanguageLabel.Text = text["language"];
         IntervalLabel.Text = text["interval"];
-        StartupCheck.Content = text["startup"];
-        ActivationCheck.Content = text["activation"];
-        AddButton.Content = text["add"];
-        RenameButton.Content = text["rename"];
-        RemoveButton.Content = text["remove"];
-        InstallButton.Content = text["install"];
-        RefreshButton.Content = text["refresh"];
+        StartupText.Text = text["startup"];
+        TrayGuideExpander.Header = text["trayGuideHeading"];
+        TrayGuideExpander.Tag = text["trayGuideTitle"];
+        TrayGuideBody.Text = text["trayGuideBody"];
+        TrayGuideSteps.Text = text["trayGuideSteps"];
+        OpenTaskbarSettingsText.Text = text["openTaskbarSettings"];
+        AddButtonText.Text = text["add"];
+        RenameButtonText.Text = text["rename"];
+        RemoveButtonText.Text = text["remove"];
+        InstallButtonText.Text = text["install"];
+        RefreshButtonText.Text = text["refresh"];
+        OpenTaskbarSettingsButton.ToolTip = text["openTaskbarSettings"];
+        AddButton.ToolTip = text["add"];
+        RenameButton.ToolTip = text["rename"];
+        RemoveButton.ToolTip = text["remove"];
+        InstallButton.ToolTip = text["install"];
+        RefreshButton.ToolTip = text["refresh"];
         SystemAppearance.Content = text["system"];
         LightAppearance.Content = text["light"];
         DarkAppearance.Content = text["dark"];
@@ -100,17 +111,13 @@ public partial class SettingsWindow : Window
     private void SaveCurrentSettings()
     {
         if (loading) return;
-        var current = viewModel.Settings;
         var updated = new AppSettings
         {
             Appearance = SelectedAppearance,
             Language = LanguageBox.SelectedValue as string ?? "system",
             RefreshIntervalSeconds = IntervalBox.SelectedValue is int interval ? interval : 120,
             LaunchAtLogin = StartupCheck.IsChecked == true,
-            AutoActivateRefreshedAccounts = ActivationCheck.IsChecked == true,
             DidPresentSetup = true,
-            AutoActivationAttempts = new Dictionary<string, long>(current.AutoActivationAttempts, StringComparer.Ordinal),
-            AutoActivationSuccesses = new Dictionary<string, long>(current.AutoActivationSuccesses, StringComparer.Ordinal),
         };
         viewModel.ApplySettings(updated);
         ThemeManager.ApplyWindowTheme(this, updated.Appearance);
@@ -125,16 +132,10 @@ public partial class SettingsWindow : Window
     private void Choice_Changed(object sender, SelectionChangedEventArgs e) => SaveCurrentSettings();
     private void Appearance_Click(object sender, RoutedEventArgs e) => SaveCurrentSettings();
 
-    private async void Check_Changed(object sender, RoutedEventArgs e)
+    private void Check_Changed(object sender, RoutedEventArgs e)
     {
         if (loading) return;
-        var enabledActivation = sender == ActivationCheck && ActivationCheck.IsChecked == true
-            && !viewModel.Settings.AutoActivateRefreshedAccounts;
         SaveCurrentSettings();
-        StatusLabel.Text = sender == StartupCheck
-            ? (StartupCheck.IsChecked == true ? "Opens automatically at sign-in" : "Sign-in launch disabled")
-            : (ActivationCheck.IsChecked == true ? "Weekly quota activation enabled" : "Weekly quota activation disabled");
-        if (enabledActivation) await viewModel.RefreshAsync(manual: true);
     }
 
     private void AccountList_SelectionChanged(object sender, SelectionChangedEventArgs e) => UpdateButtonState();
@@ -201,5 +202,18 @@ public partial class SettingsWindow : Window
     {
         Clipboard.SetText("npm install -g @loongphy/codex-auth@next");
         StatusLabel.Text = "Install command copied";
+    }
+
+    private void OpenTaskbarSettings_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo("ms-settings:taskbar") { UseShellExecute = true });
+            TrayGuideStatus.Text = viewModel.Text["taskbarSettingsOpened"];
+        }
+        catch (Exception error) when (error is InvalidOperationException or System.ComponentModel.Win32Exception)
+        {
+            TrayGuideStatus.Text = viewModel.Text["taskbarSettingsFailed"];
+        }
     }
 }

@@ -16,7 +16,6 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
     private let languagePopup = NSPopUpButton()
     private let refreshPopup = NSPopUpButton()
     private let launchAtLoginButton = NSButton(checkboxWithTitle: "", target: nil, action: nil)
-    private let autoActivateButton = NSButton(checkboxWithTitle: "", target: nil, action: nil)
     private let generalHeading = NSTextField(labelWithString: "")
     private let accountsHeading = NSTextField(labelWithString: "")
     private let languageLabel = NSTextField(labelWithString: "")
@@ -93,8 +92,6 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
         self.refreshPopup.action = #selector(self.changeRefreshInterval(_:))
         self.launchAtLoginButton.target = self
         self.launchAtLoginButton.action = #selector(self.changeLaunchAtLogin(_:))
-        self.autoActivateButton.target = self
-        self.autoActivateButton.action = #selector(self.changeAutoActivation(_:))
 
         for control in [self.languagePopup, self.refreshPopup] {
             control.controlSize = .regular
@@ -115,8 +112,6 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
             refreshRow,
             self.separator(),
             self.checkboxRow(self.launchAtLoginButton),
-            self.separator(),
-            self.checkboxRow(self.autoActivateButton),
         ])
         generalStack.orientation = .vertical
         generalStack.alignment = .width
@@ -288,7 +283,6 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
         self.appearanceLabel.stringValue = self.text("appearance")
         self.refreshLabel.stringValue = self.text("refresh")
         self.launchAtLoginButton.title = self.text("startup")
-        self.autoActivateButton.title = self.text("activation")
         self.addButton.title = self.text("add")
         self.renameButton.title = self.text("rename")
         self.removeButton.title = self.text("remove")
@@ -312,7 +306,6 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
         let refreshIndex = RefreshInterval.allCases.firstIndex(of: self.preferences.refreshInterval) ?? 0
         self.refreshPopup.selectItem(at: refreshIndex)
         self.launchAtLoginButton.state = self.launchAtLogin.isEnabled ? .on : .off
-        self.autoActivateButton.state = self.preferences.autoActivateRefreshedAccounts ? .on : .off
 
         let registry = self.registryProvider()
         self.accounts = registry?.menuAccounts ?? []
@@ -410,14 +403,6 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
                 title: "Unable to Change Login Setting",
                 message: "Move Codex Duo to Applications and try again.\n\n\(error.localizedDescription)")
         }
-    }
-
-    @objc private func changeAutoActivation(_ sender: NSButton) {
-        self.preferences.autoActivateRefreshedAccounts = sender.state == .on
-        self.statusLabel.stringValue = sender.state == .on
-            ? "Weekly quota activation enabled"
-            : "Weekly quota activation disabled"
-        if sender.state == .on { self.onRefreshRequested() }
     }
 
     @objc private func addAccount(_ sender: Any?) {

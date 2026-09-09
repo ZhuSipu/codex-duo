@@ -86,9 +86,6 @@ final class AppPreferences {
         static let language = "language"
         static let refreshInterval = "refreshIntervalSeconds"
         static let didPresentSetup = "didPresentSetup"
-        static let autoActivateRefreshedAccounts = "autoActivateRefreshedAccounts"
-        static let autoActivationAttempts = "autoActivationAttempts"
-        static let autoActivationSuccesses = "autoActivationSuccesses"
     }
 
     private let defaults: UserDefaults
@@ -127,42 +124,6 @@ final class AppPreferences {
     var didPresentSetup: Bool {
         get { self.defaults.bool(forKey: Key.didPresentSetup) }
         set { self.defaults.set(newValue, forKey: Key.didPresentSetup) }
-    }
-
-    var autoActivateRefreshedAccounts: Bool {
-        get {
-            guard self.defaults.object(forKey: Key.autoActivateRefreshedAccounts) != nil else { return true }
-            return self.defaults.bool(forKey: Key.autoActivateRefreshedAccounts)
-        }
-        set {
-            self.defaults.set(newValue, forKey: Key.autoActivateRefreshedAccounts)
-            self.notifyChange()
-        }
-    }
-
-    func shouldAttemptAutoActivation(accountKey: String, boundary: TimeInterval, now: Date = Date()) -> Bool {
-        let successes = self.defaults.dictionary(forKey: Key.autoActivationSuccesses) as? [String: Double] ?? [:]
-        if (successes[accountKey] ?? 0) >= boundary { return false }
-
-        let attempts = self.defaults.dictionary(forKey: Key.autoActivationAttempts) as? [String: Double] ?? [:]
-        return now.timeIntervalSince1970 - (attempts[accountKey] ?? 0) >= 3_600
-    }
-
-    func recordAutoActivationAttempt(accountKey: String, at date: Date = Date()) {
-        var attempts = self.defaults.dictionary(forKey: Key.autoActivationAttempts) as? [String: Double] ?? [:]
-        attempts[accountKey] = date.timeIntervalSince1970
-        self.defaults.set(attempts, forKey: Key.autoActivationAttempts)
-    }
-
-    func recordAutoActivationSuccess(accountKey: String, at date: Date = Date()) {
-        var successes = self.defaults.dictionary(forKey: Key.autoActivationSuccesses) as? [String: Double] ?? [:]
-        successes[accountKey] = date.timeIntervalSince1970
-        self.defaults.set(successes, forKey: Key.autoActivationSuccesses)
-    }
-
-    func autoActivationStart(accountKey: String) -> Date? {
-        let successes = self.defaults.dictionary(forKey: Key.autoActivationSuccesses) as? [String: Double] ?? [:]
-        return successes[accountKey].map(Date.init(timeIntervalSince1970:))
     }
 
     private func notifyChange() {

@@ -16,8 +16,7 @@ Shared macOS and Windows behavior is defined in [`docs/feature-spec.md`](docs/fe
 - Visible `M/H/D OLD` age badges when a usage value has not been observed for at least 15 minutes.
 - Live updates while the macOS menu remains open, including newly appearing usage windows.
 - Automatic 5-hour/weekly two-column layout if the 300-minute window returns in the future.
-- Reset countdowns with day, hour, and minute precision; a full weekly quota remains at `7d` until its first message anchors the window.
-- Optional quota activation that switches to a refreshed weekly account and sends one ephemeral Codex message to anchor the next reset.
+- Reset countdowns with day, hour, and minute precision.
 - Direct, confirmation-free account-row switching followed by a verified Codex App restart.
 - Native account setup for adding, renaming, removing, and refreshing up to ten accounts.
 - System, Light, and Dark appearance modes with improved light-mode hover feedback.
@@ -71,7 +70,6 @@ Download `Codex-Duo-1.0.0-Windows-x64-Setup.exe` for a per-user installation, or
 - **Language:** Follow the system language or choose English, Simplified Chinese, Traditional Chinese, Japanese, Korean, Spanish, French, or German.
 - **Automatic refresh:** Off or every 1, 2, 5, 10, or 15 minutes. Off keeps cached usage visible and disables API-backed refresh until Refresh Now is selected.
 - **Startup:** Register or unregister Codex Duo with macOS Login Items or the Windows per-user Run entry.
-- **Quota activation:** Enabled by default. A refreshed weekly account is selected automatically and receives one ephemeral activation message. Successful windows are recorded locally so they are activated only once; failed attempts wait one hour before retrying. Detection continues every two minutes when Automatic refresh is Off, and the option can be disabled explicitly.
 - **Accounts:** Add an account through Terminal, rename an alias, remove a selected account with confirmation, or refresh usage manually.
 
 Click a non-current account row in the menu to switch immediately. Clicking the current account never invokes a switch. Switching terminates and relaunches Codex, so stop any active response first.
@@ -96,6 +94,8 @@ dotnet test Windows/CodexDuo.Windows.sln -c Release
 ```
 
 Windows release files are written to `dist/`. Set `CODEX_DUO_SIGN_THUMBPRINT` and optionally `CODEX_DUO_TIMESTAMP_URL` to Authenticode-sign the executable and installer.
+
+On a Windows machine with the per-user app installed, ordinary `dotnet build` commands automatically synchronize the successful build to the installed Codex Duo directory and restart Codex Duo. Pass `-p:SyncInstalledCodexDuo=false` to build without updating the running app. Runtime-specific publish and CI builds skip live synchronization.
 
 ## Build and test
 
@@ -143,8 +143,6 @@ On macOS, Codex Duo also reads recent local `token_count.rate_limits` events wri
 A successful process exit containing `TimedOut` is treated as a refresh failure instead of fresh data. The warning remains visible across registry polling until a real refresh succeeds.
 
 Codex Duo passes enabled per-user system proxy settings to `codex-auth` when the app process does not already have proxy environment variables. It reads the dynamic HTTP, HTTPS, SOCKS, and exceptions configuration. Existing `HTTP_PROXY`, `HTTPS_PROXY`, `ALL_PROXY`, and `NO_PROXY` values always take precedence.
-
-On macOS, a 100% weekly quota with no locally recorded activation is treated as waiting for its first message and displayed as `7d`. If quota activation is enabled, the refresh pass handles one waiting weekly account, sends a read-only ephemeral `codex exec` message, refreshes its usage, and relaunches Codex. The successful message time becomes the local seven-day countdown anchor.
 
 ## Privacy and risk
 

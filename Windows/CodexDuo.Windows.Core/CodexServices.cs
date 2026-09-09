@@ -140,17 +140,6 @@ public sealed class CodexAuthService
         }
     }
 
-    public Task<CommandResult> RefreshActiveAsync(CancellationToken cancellationToken = default) =>
-        RunCodexAuthAsync(["list", "--active"], TimeSpan.FromSeconds(30), false, cancellationToken);
-
-    public Task<CommandResult> ActivateQuotaAsync(CancellationToken cancellationToken = default)
-    {
-        var command = locator.FindCodexCli();
-        return command is null
-            ? Task.FromResult(new CommandResult(127, string.Empty, "Codex CLI was not found."))
-            : runner.RunAsync(command, CodexAuthCommands.ActivateQuota(), TimeSpan.FromSeconds(45), false, cancellationToken);
-    }
-
     public bool OpenLoginInTerminal()
     {
         var command = locator.FindCodexAuth();
@@ -249,12 +238,38 @@ public static class CodexAppController
         }
         if (forcedCount > 0) DiagnosticLog.Write("codex.stop.forced", $"count={forcedCount}");
 
-        await Task.Delay(150, cancellationToken);
-        var remainingFrontends = FindCodexProcesses();
-        var remaining = remainingFrontends.Concat(FindCodexBackendProcesses(remainingFrontends)).ToList();
-        var failed = remaining.Count > 0;
-        foreach (var process in processes.Concat(remaining)) process.Dispose();
-        DiagnosticLog.Write(failed ? "codex.stop.failed" : "codex.stop.complete");
+        // Kill() only requests termination. Electron commonly needs several
+        // hundred milliseconds to tear down its process tree, and can briefly
+        // replace a utility process while doing so. A single snapshot after
+        // 150 ms therefore reported a false failure even though Codex exited
+        // moments later. Poll the verified frontend set through a bounded
+        // grace period and stop any short-lived replacements it creates.
+        var shutdownDeadline = DateTimeOffset.UtcNow.AddSeconds(3);
+        var remainingCount = 0;
+        do
+        {
+            await Task.Delay(100, cancellationToken);
+            var remainingFrontends = FindCodexProcesses();
+            remainingCount = remainingFrontends.Count
+                + processes.Count(process => !HasExited(process));
+
+            foreach (var process in remainingFrontends)
+            {
+                if (!HasExited(process))
+                {
+                    try { process.Kill(entireProcessTree: false); }
+                    catch (Exception error) when (error is InvalidOperationException or System.ComponentModel.Win32Exception) { }
+                }
+                process.Dispose();
+            }
+        }
+        while (remainingCount > 0 && DateTimeOffset.UtcNow < shutdownDeadline);
+
+        var failed = remainingCount > 0;
+        foreach (var process in processes) process.Dispose();
+        DiagnosticLog.Write(
+            failed ? "codex.stop.failed" : "codex.stop.complete",
+            failed ? $"remaining={remainingCount}" : null);
         return failed
             ? new CommandResult(5, string.Empty, "Codex could not be closed. Stop active work or close Codex manually, then retry.")
             : new CommandResult(0, string.Empty, string.Empty);

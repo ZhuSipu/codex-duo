@@ -3,14 +3,16 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:CodexDuo.Windows"
         Title="Codex Duo" Width="356" MaxHeight="720" SizeToContent="Height"
-        WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        WindowStyle="None" AllowsTransparency="False" Background="{DynamicResource WindowBackgroundBrush}"
         ShowInTaskbar="False" Topmost="True" ResizeMode="NoResize"
-        TextOptions.TextFormattingMode="Display" TextOptions.TextRenderingMode="ClearType">
+        UseLayoutRounding="True" SnapsToDevicePixels="True"
+        TextOptions.TextFormattingMode="Display" TextOptions.TextRenderingMode="ClearType"
+        TextOptions.TextHintingMode="Fixed">
   <Window.Resources>
     <local:BooleanToVisibilityConverter x:Key="BoolVisibility" />
     <local:StringToVisibilityConverter x:Key="StringVisibility" />
     <Style x:Key="UsageLabel" TargetType="TextBlock">
-      <Setter Property="FontSize" Value="8.5" />
+      <Setter Property="FontSize" Value="9" />
       <Setter Property="FontWeight" Value="SemiBold" />
       <Setter Property="Foreground" Value="{DynamicResource TertiaryTextBrush}" />
     </Style>
@@ -29,8 +31,6 @@
       <Setter Property="BorderThickness" Value="0" />
       <Setter Property="Background" Value="Transparent" />
       <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-      <Setter Property="RenderTransformOrigin" Value="0.5,0.5" />
-      <Setter Property="RenderTransform"><Setter.Value><ScaleTransform ScaleX="1" ScaleY="1" /></Setter.Value></Setter>
       <Setter Property="Template">
         <Setter.Value>
           <ControlTemplate TargetType="Button">
@@ -67,24 +67,10 @@
           </ControlTemplate>
         </Setter.Value>
       </Setter>
-      <Style.Triggers>
-        <EventTrigger RoutedEvent="PreviewMouseDown"><BeginStoryboard><Storyboard>
-          <DoubleAnimation Storyboard.TargetProperty="RenderTransform.(ScaleTransform.ScaleX)" To="0.985" Duration="0:0:0.07" />
-          <DoubleAnimation Storyboard.TargetProperty="RenderTransform.(ScaleTransform.ScaleY)" To="0.985" Duration="0:0:0.07" />
-        </Storyboard></BeginStoryboard></EventTrigger>
-        <EventTrigger RoutedEvent="PreviewMouseUp"><BeginStoryboard><Storyboard>
-          <DoubleAnimation Storyboard.TargetProperty="RenderTransform.(ScaleTransform.ScaleX)" To="1" Duration="0:0:0.14" />
-          <DoubleAnimation Storyboard.TargetProperty="RenderTransform.(ScaleTransform.ScaleY)" To="1" Duration="0:0:0.14" />
-        </Storyboard></BeginStoryboard></EventTrigger>
-        <EventTrigger RoutedEvent="MouseLeave"><BeginStoryboard><Storyboard>
-          <DoubleAnimation Storyboard.TargetProperty="RenderTransform.(ScaleTransform.ScaleX)" To="1" Duration="0:0:0.14" />
-          <DoubleAnimation Storyboard.TargetProperty="RenderTransform.(ScaleTransform.ScaleY)" To="1" Duration="0:0:0.14" />
-        </Storyboard></BeginStoryboard></EventTrigger>
-      </Style.Triggers>
     </Style>
     <Style x:Key="FooterButtonStyle" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
       <Setter Property="MinHeight" Value="25" />
-      <Setter Property="FontSize" Value="10.5" />
+      <Setter Property="FontSize" Value="11" />
       <Setter Property="FontWeight" Value="Medium" />
       <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}" />
       <Setter Property="Background" Value="Transparent" />
@@ -112,20 +98,19 @@
     </Style>
   </Window.Resources>
 
-  <Border Margin="10" CornerRadius="10" Background="{DynamicResource WindowBackgroundBrush}"
+  <Border CornerRadius="10" Background="{DynamicResource WindowBackgroundBrush}"
           BorderBrush="{DynamicResource StrongBorderBrush}" BorderThickness="1" ToolTip="{Binding Warning}">
-    <Border.Effect><DropShadowEffect BlurRadius="14" ShadowDepth="3" Opacity="0.18" /></Border.Effect>
     <Grid>
       <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="34" /></Grid.RowDefinitions>
       <Border Margin="12,8,12,2" Padding="9,6" CornerRadius="6" Background="{DynamicResource HoverBrush}"
               BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0.5"
               Visibility="{Binding Error, Converter={StaticResource StringVisibility}}">
-        <TextBlock Text="{Binding Error}" TextWrapping="Wrap" FontSize="10.5" Foreground="{DynamicResource SecondaryTextBrush}" />
+        <TextBlock Text="{Binding Error}" TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" />
       </Border>
       <Border Grid.Row="1" Margin="12,4,12,2" Padding="9,6" CornerRadius="6" Background="{DynamicResource HoverBrush}"
               BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0.5"
               Visibility="{Binding Warning, Converter={StaticResource StringVisibility}}">
-        <TextBlock Text="{Binding Warning}" TextWrapping="Wrap" FontSize="10.5" Foreground="{DynamicResource SecondaryTextBrush}" />
+        <TextBlock Text="{Binding Warning}" TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" />
       </Border>
       <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" MaxHeight="568" Padding="8,4" Background="Transparent">
         <Grid>
@@ -149,14 +134,14 @@
                                      Visibility="{Binding CanSwitch, Converter={StaticResource BoolVisibility}}" />
                           <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
                             <Border Style="{StaticResource BadgeStyle}" Margin="0,0,6,0">
-                              <TextBlock Text="{Binding PlanText}" FontSize="8.5" Foreground="{DynamicResource TertiaryTextBrush}" />
+                              <TextBlock Text="{Binding PlanText}" FontSize="9" Foreground="{DynamicResource TertiaryTextBrush}" />
                             </Border>
                             <Border Style="{StaticResource BadgeStyle}" Margin="0,0,6,0"
                                     Visibility="{Binding AgeText, Converter={StaticResource StringVisibility}}">
-                              <TextBlock Text="{Binding AgeText}" FontSize="8.5" Foreground="{DynamicResource TertiaryTextBrush}" />
+                              <TextBlock Text="{Binding AgeText}" FontSize="9" Foreground="{DynamicResource TertiaryTextBrush}" />
                             </Border>
                           </StackPanel>
-                          <TextBlock Text="{Binding DisplayName}" FontSize="11.5"
+                          <TextBlock Text="{Binding DisplayName}" FontSize="12"
                                      TextTrimming="CharacterEllipsis" VerticalAlignment="Center">
                             <TextBlock.Style>
                               <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
@@ -181,7 +166,7 @@
                                     <TextBlock Text="{Binding PercentageText}" FontSize="9" Foreground="{DynamicResource SecondaryTextBrush}" />
                                     <TextBlock Text=" · " FontSize="9" Foreground="{DynamicResource QuaternaryTextBrush}"
                                                Visibility="{Binding HasReset, Converter={StaticResource BoolVisibility}}" />
-                                    <TextBlock Text="{Binding Reset}" FontFamily="Segoe UI Variable Small, Segoe UI" FontSize="9" FontWeight="SemiBold"
+                                    <TextBlock Text="{Binding Reset}" FontSize="9" FontWeight="SemiBold"
                                                Visibility="{Binding HasReset, Converter={StaticResource BoolVisibility}}" />
                                   </StackPanel>
                                 </DockPanel>
@@ -212,10 +197,10 @@
         <Border Height="0.5" VerticalAlignment="Top" Margin="10,0" Background="{DynamicResource BorderBrush}" />
         <DockPanel VerticalAlignment="Center" LastChildFill="False">
           <Button Style="{StaticResource FooterButtonStyle}" Click="Settings_Click">
-            <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE713;" FontFamily="Segoe Fluent Icons" FontSize="11" Margin="0,0,5,0" /><TextBlock Text="{Binding SettingsText}" /></StackPanel>
+            <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE713;" FontFamily="Segoe Fluent Icons" FontSize="11" Margin="0,0,5,0" VerticalAlignment="Center" /><TextBlock Text="{Binding SettingsText}" VerticalAlignment="Center" /></StackPanel>
           </Button>
           <Button Style="{StaticResource FooterButtonStyle}" DockPanel.Dock="Right" Click="Quit_Click">
-            <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE7E8;" FontFamily="Segoe Fluent Icons" FontSize="11" Margin="0,0,5,0" /><TextBlock Text="{Binding QuitText}" /></StackPanel>
+            <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE7E8;" FontFamily="Segoe Fluent Icons" FontSize="11" Margin="0,0,5,0" VerticalAlignment="Center" /><TextBlock Text="{Binding QuitText}" VerticalAlignment="Center" /></StackPanel>
           </Button>
         </DockPanel>
       </Grid>

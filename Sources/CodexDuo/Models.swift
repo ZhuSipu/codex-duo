@@ -153,25 +153,6 @@ struct CodexAccount: Decodable {
         return "\(seconds / 86_400)D OLD"
     }
 
-    func weeklyRefreshBoundary(comparedTo previous: CodexAccount?, now: Date = Date()) -> TimeInterval? {
-        guard let current = self.lastUsage?.weekly,
-              let currentReset = current.resetsAt
-        else { return nil }
-
-        let nowSeconds = now.timeIntervalSince1970
-        if currentReset <= nowSeconds { return currentReset }
-        if current.remainingPercent(now: now) == 100 {
-            let duration = TimeInterval((current.windowMinutes ?? 10_080) * 60)
-            return currentReset - duration
-        }
-
-        guard let previousWindow = previous?.lastUsage?.weekly,
-              let previousReset = previousWindow.resetsAt,
-              previousReset <= nowSeconds,
-              currentReset > previousReset
-        else { return nil }
-        return previousReset
-    }
 }
 
 struct UsageSnapshot: Codable {
@@ -225,20 +206,4 @@ struct RateLimitWindow: Codable {
         return "\(minutes)min"
     }
 
-    func displayResetText(activationStart: Date?, now: Date = Date()) -> String? {
-        guard self.windowMinutes == 10_080, self.remainingPercent(now: now) == 100 else {
-            return self.resetText(now: now)
-        }
-        if let activationStart {
-            let anchoredReset = activationStart.addingTimeInterval(604_800).timeIntervalSince1970
-            if anchoredReset > now.timeIntervalSince1970 {
-                let anchoredWindow = RateLimitWindow(
-                    usedPercent: self.usedPercent,
-                    windowMinutes: self.windowMinutes,
-                    resetsAt: anchoredReset)
-                return anchoredWindow.resetText(now: now)
-            }
-        }
-        return "7d"
-    }
 }

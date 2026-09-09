@@ -5,16 +5,15 @@ All notable changes to Codex Duo are documented here.
 ## 1.0.0 - 2026-08-26
 
 - Add a new independent Windows implementation built from the shared behavior specification with .NET 8 and WPF.
-- Add a native system-tray account panel, manual and scheduled refresh, verified switching, account management, appearance, localization, startup, and quota activation.
-- Add safe Node-based discovery for `codex-auth` and Codex CLI commands without shell-interpolating account selectors.
+- Add a native system-tray account panel, manual and scheduled refresh, verified switching, account management, appearance, localization, and startup.
+- Add safe Node-based discovery for `codex-auth` commands without shell-interpolating account selectors.
 - Add a self-contained Windows portable build, per-user Inno Setup installer, optional Authenticode signing, SHA-256 checksums, Windows CI, and cross-platform release publishing.
-- Add Windows model and behavior tests for shared configuration defaults, account selection, quota semantics, stale ages, timeout handling, and activation bookkeeping.
+- Add Windows model and behavior tests for shared configuration defaults, account selection, quota semantics, stale ages, and timeout handling.
+- Keep the Windows tray process independent from Codex on every launch so a forced Codex restart cannot terminate Codex Duo before the account switch runs.
+- Preserve Windows launch options across detached startup, improve long localized settings labels, and add an in-app guide for keeping the tray icon visible.
 
 ## 0.9.0 - 2026-08-26
 
-- Treat an untouched 100% weekly quota as a waiting seven-day window instead of counting down from an unanchored API timestamp.
-- Add default-enabled macOS activation for refreshed weekly accounts with one ephemeral Codex message, duplicate prevention, an hourly failure cooldown, and an explicit opt-out setting.
-- Bound activation commands and UI state with timeouts, discard subprocess output to prevent pipe stalls, and use a low-reasoning fast model for the activation message.
 - Prefer recent local Codex rate-limit events for every uniquely matching macOS account when `codex-auth` times out, persist verified inactive-account samples across restarts, scan the full weekly window, and reject ambiguous or older values.
 - Show age badges for values older than 15 minutes and preserve logical `TimedOut` refresh warnings across background registry polling.
 - Refresh an already-open macOS menu in place when local rate-limit events add or update a 5-hour or weekly window, with polling timers registered for menu-tracking run-loop modes.

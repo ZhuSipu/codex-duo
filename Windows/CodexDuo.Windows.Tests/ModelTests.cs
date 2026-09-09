@@ -70,19 +70,6 @@ public sealed class ModelTests
     }
 
     [Fact]
-    public void FullWeeklyWindow_ShowsSevenDaysUntilActivated()
-    {
-        var window = new RateLimitWindow
-        {
-            UsedPercent = 0,
-            WindowMinutes = 10_080,
-            ResetsAt = Now.AddDays(7).ToUnixTimeSeconds(),
-        };
-        Assert.Equal("7d", window.DisplayResetText(null, Now));
-        Assert.Equal("6d 23h", window.DisplayResetText(Now, Now.AddMinutes(1)));
-    }
-
-    [Fact]
     public void UsageSnapshot_OnlyReturnsPresentRecognizedWindows()
     {
         var snapshot = new UsageSnapshot

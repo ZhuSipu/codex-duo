@@ -42,13 +42,12 @@ Codex Duo depends on:
 
 - the official Codex desktop app;
 - `codex-auth` for account registry management, usage refresh, login, aliases, removal, and account switching;
-- the Codex CLI only when quota activation is enabled and an activation is required.
 
 The account registry is `~/.codex/accounts/registry.json`, where `~` means the current user's home directory on the running platform. Codex Duo may read this registry but must not directly edit it.
 
 Managed `*.auth.json` snapshots, tokens, passwords, and other credentials are owned by Codex and `codex-auth`. Codex Duo must not open or parse those files. Account mutations must be delegated to `codex-auth`.
 
-Codex Duo itself does not implement an account-usage network client. Network activity needed by refresh, login, switching, or activation is delegated to the installed command-line dependencies.
+Codex Duo itself does not implement an account-usage network client. Network activity needed by refresh, login, or switching is delegated to the installed command-line dependencies.
 
 ## 4. Logical configuration
 
@@ -58,9 +57,8 @@ Each platform may use native preference storage. The logical fields and defaults
 | --- | --- | --- | --- |
 | `appearance` | `system`, `light`, `dark` | `system` | Apply changes immediately to Codex Duo UI. |
 | `language` | `system`, `en`, `zh-Hans`, `zh-Hant`, `ja`, `ko`, `es`, `fr`, `de` | `system` | `system` resolves from the OS language; unsupported languages fall back to English. |
-| `refreshIntervalSeconds` | `0`, `60`, `120`, `300`, `600`, `900` | `120` | `0` disables scheduled API-backed refresh except the activation check described below. |
+| `refreshIntervalSeconds` | `0`, `60`, `120`, `300`, `600`, `900` | `120` | `0` disables scheduled API-backed refresh. |
 | `launchAtLogin` | boolean | `false` | Reflect and change the platform's real startup-registration state. |
-| `autoActivateRefreshedAccounts` | boolean | `true` | Enable the quota-activation behavior in section 8. |
 
 Internal migration or bookkeeping fields may be platform-specific. They must not change these defaults for a new installation without a specification update.
 
@@ -103,33 +101,15 @@ The newest verified snapshot remains visible when refresh fails. A platform may 
 
 Scheduled refresh delegates to `codex-auth list` at the configured interval. Manual **Refresh Now** works even when automatic refresh is Off.
 
-Refreshes must not overlap with another refresh, account switch, or quota activation. After a successful refresh, reload the registry and update all open account views.
+Refreshes must not overlap with another refresh or account switch. After a successful refresh, reload the registry and update all open account views.
 
 If a successful command exit contains `TimedOut`, treat it as refresh failure rather than fresh usage. Keep the newest verified cached values and display a persistent warning until a real refresh succeeds.
 
-When automatic refresh is Off and quota activation remains enabled, an activation-detection refresh runs every 120 seconds. When both are Off, no scheduled refresh is required.
+When automatic refresh is Off, no scheduled refresh is required.
 
 Existing process-level proxy environment variables take precedence. A platform may import enabled per-user system proxy settings for missing proxy variables before invoking `codex-auth`.
 
-## 8. Weekly quota activation
-
-A weekly window at 100% is waiting for its first usage message unless the current window already has a locally recorded successful activation. Before that first message, display its reset countdown as `7d`.
-
-When automatic activation is enabled, a successful refresh may process one eligible weekly account:
-
-1. select an eligible account deterministically, preferring the oldest detected refresh boundary;
-2. record the attempt time;
-3. switch to that account and verify `active_account_key`;
-4. run one ephemeral, read-only Codex activation message;
-5. refresh active usage;
-6. relaunch the Codex desktop app;
-7. on success, record the activation time as the local seven-day countdown anchor.
-
-A successful activation is not repeated for the same weekly window. A failed or timed-out attempt has a one-hour cooldown before retry. The operation must surface failure and must not record success unless all required steps complete.
-
-The activation command and model are implementation details that may change independently when their safety properties remain ephemeral, read-only, non-interactive, and free of user-repository modification.
-
-## 9. User operations
+## 8. User operations
 
 ### Add account
 
@@ -159,7 +139,7 @@ Only one switch may run at a time. If switching or verification fails after Code
 
 Startup registration uses the platform's native mechanism and reports its real state. Settings changes that do not require a long-running command apply immediately. Quit exits Codex Duo and does not quit Codex or remove accounts.
 
-## 10. Error handling
+## 9. Error handling
 
 Errors must be concise, actionable, and visible in the relevant account or settings surface.
 
@@ -174,7 +154,7 @@ Errors must be concise, actionable, and visible in the relevant account or setti
 
 Errors clear only after the relevant operation or registry reload genuinely succeeds. Logs and UI messages must not contain credentials or full authentication snapshots.
 
-## 11. Platform implementation boundaries
+## 10. Platform implementation boundaries
 
 Shared behavior belongs in this specification. Code belongs in `shared/` only when it is genuinely portable, such as schemas, protocol fixtures, or platform-neutral test data.
 
@@ -189,19 +169,18 @@ Platform-native concerns include:
 - system proxy discovery;
 - optional local usage-event discovery.
 
-Platform-specific implementations may differ internally but must meet sections 3 through 10.
+Platform-specific implementations may differ internally but must meet sections 3 through 9.
 
-## 12. Privacy and security requirements
+## 11. Privacy and security requirements
 
 - Do not bundle credentials, account snapshots, analytics, or telemetry.
 - Do not read managed authentication snapshot files.
 - Do not print tokens or credential-bearing command output.
 - Do not silently install dependencies or weaken OS security controls.
-- Keep quota activation ephemeral and read-only.
 - Treat registry and dependency schemas as external inputs that may be missing or malformed.
 - Do not delete `codex-auth` account data during Codex Duo uninstall.
 
-## 13. Implementation status
+## 12. Implementation status
 
 Status values are **Implemented**, **Planned**, **Partial**, or **Not applicable**. A feature is Implemented only after platform build/test verification.
 
@@ -217,20 +196,19 @@ Status values are **Implemented**, **Planned**, **Partial**, or **Not applicable
 | Appearance modes | Implemented | Implemented | Native rendering differs. |
 | Nine language choices including System | Implemented | Implemented | Both settings surfaces expose the same choices and system fallback. |
 | Launch at login | Implemented | Implemented | Windows uses a verified per-user Run entry. |
-| Weekly quota activation | Implemented | Implemented | Ephemeral read-only activation with cooldown and success bookkeeping. |
 | Verified local usage reconciliation | Implemented | Planned | Windows source and feasibility must be designed independently. |
 | macOS build/test CI | Implemented | Not applicable | Independent GitHub Actions job. |
 | Windows build/test CI | Not applicable | Implemented | Independent .NET build, test, and self-contained publish job. |
 | Installer and release packaging | Implemented | Implemented | Windows provides portable ZIP, per-user installer, checksums, and optional Authenticode signing. |
 | Automatic application updates | Planned | Planned | Not present in the current product. |
 
-## 14. Cross-platform acceptance criteria
+## 13. Cross-platform acceptance criteria
 
 A feature is behaviorally aligned when both platforms can demonstrate, with platform-appropriate tests, that:
 
 - defaults and allowed configuration values match section 4;
 - the same registry fixture yields the same account selection and usage interpretation;
-- missing, stale, expired, timed-out, and ambiguous data follow sections 6, 7, and 10;
+- missing, stale, expired, timed-out, and ambiguous data follow sections 6, 7, and 9;
 - account mutations use the same validation and confirmation semantics;
 - switching is serialized and verified before success;
 - no credential files or secrets are read or emitted;

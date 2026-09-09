@@ -152,11 +152,9 @@ enum ModelTests {
         precondition(preferences.appearanceMode == .system)
         precondition(preferences.language == .system)
         precondition(preferences.refreshInterval == .twoMinutes)
-        precondition(preferences.autoActivateRefreshedAccounts)
         preferences.appearanceMode = .dark
         preferences.language = .simplifiedChinese
         preferences.refreshInterval = .off
-        preferences.autoActivateRefreshedAccounts = false
         precondition(preferences.appearanceMode == .dark)
         precondition(preferences.language == .simplifiedChinese)
         precondition(SettingsText.value("accounts", language: .simplifiedChinese) == "账户")
@@ -167,15 +165,6 @@ enum ModelTests {
             precondition(!language.displayName.isEmpty)
         }
         precondition(preferences.refreshInterval == .off)
-        precondition(!preferences.autoActivateRefreshedAccounts)
-        preferences.autoActivateRefreshedAccounts = true
-        let activationNow = Date(timeIntervalSince1970: 200_000)
-        precondition(preferences.shouldAttemptAutoActivation(accountKey: "account-a", boundary: 190_000, now: activationNow))
-        preferences.recordAutoActivationAttempt(accountKey: "account-a", at: activationNow)
-        precondition(!preferences.shouldAttemptAutoActivation(accountKey: "account-a", boundary: 190_000, now: activationNow))
-        preferences.recordAutoActivationSuccess(accountKey: "account-a", at: activationNow)
-        precondition(!preferences.shouldAttemptAutoActivation(accountKey: "account-a", boundary: 190_000, now: activationNow.addingTimeInterval(4_000)))
-        precondition(preferences.autoActivationStart(accountKey: "account-a") == activationNow)
 
         let selector = "unique@example.com"
         precondition(CodexAuthCommands.switchAccount(selector: selector) == ["switch", selector])
@@ -183,14 +172,6 @@ enum ModelTests {
         precondition(CodexAuthCommands.setAlias(selector: selector, alias: "work") == ["alias", "set", selector, "work"])
         precondition(CodexAuthCommands.setAlias(selector: selector, alias: "  ") == ["alias", "clear", selector])
         precondition(!CodexAuthCommands.removeAccount(selector: selector).contains("--skip-api"))
-        let activationCommand = CodexAuthCommands.activateQuota()
-        precondition(activationCommand.first == "exec")
-        precondition(activationCommand.contains("--ephemeral"))
-        precondition(activationCommand.contains("--ignore-user-config"))
-        precondition(activationCommand.contains("read-only"))
-        precondition(activationCommand.contains("gpt-5.4-mini"))
-        precondition(activationCommand.contains("model_reasoning_effort=\"low\""))
-        precondition(activationCommand.last == CodexAuthCommands.activationPrompt)
         let timedOutRefresh = CodexAuthService.normalizedUsageRefreshResult(
             CommandResult(status: 0, stdout: "01 account Plus TimedOut TimedOut", stderr: ""))
         precondition(!timedOutRefresh.succeeded)
@@ -228,24 +209,6 @@ enum ModelTests {
             windowMinutes: 10_080,
             resetsAt: weeklyReset)
         precondition(weeklyCountdown.resetText(now: testNow) == "6d 14h")
-
-        let expiredFixture = #"{"schema_version":4,"active_account_key":"account-a","accounts":[{"account_key":"account-a","email":"first@example.com","alias":null,"plan":"plus","last_usage_at":null,"last_usage":{"primary":{"used_percent":0,"window_minutes":10080,"resets_at":99000},"secondary":null}}]}"#
-        let expiredRegistry = try JSONDecoder().decode(CodexRegistry.self, from: Data(expiredFixture.utf8))
-        precondition(expiredRegistry.accounts[0].weeklyRefreshBoundary(comparedTo: nil, now: testNow) == 99_000)
-
-        let advancedFixture = #"{"schema_version":4,"active_account_key":"account-a","accounts":[{"account_key":"account-a","email":"first@example.com","alias":null,"plan":"plus","last_usage_at":null,"last_usage":{"primary":{"used_percent":0,"window_minutes":10080,"resets_at":704800},"secondary":null}}]}"#
-        let advancedRegistry = try JSONDecoder().decode(CodexRegistry.self, from: Data(advancedFixture.utf8))
-        precondition(advancedRegistry.accounts[0].weeklyRefreshBoundary(comparedTo: expiredRegistry.accounts[0], now: testNow) == 100_000)
-
-        let dormantFixture = #"{"schema_version":4,"active_account_key":"account-a","accounts":[{"account_key":"account-a","email":"first@example.com","alias":null,"plan":"plus","last_usage_at":null,"last_usage":{"primary":{"used_percent":0,"window_minutes":10080,"resets_at":670660},"secondary":null}}]}"#
-        let dormantRegistry = try JSONDecoder().decode(CodexRegistry.self, from: Data(dormantFixture.utf8))
-        precondition(dormantRegistry.accounts[0].weeklyRefreshBoundary(comparedTo: nil, now: testNow) == 65_860)
-        let dormantWindow = dormantRegistry.accounts[0].lastUsage!.weekly!
-        precondition(dormantWindow.resetText(now: testNow) == "6d 14h")
-        precondition(dormantWindow.displayResetText(activationStart: nil, now: testNow) == "7d")
-        precondition(dormantWindow.displayResetText(
-            activationStart: testNow.addingTimeInterval(-46_800),
-            now: testNow) == "6d 11h")
 
         let hourlyReset: TimeInterval = 111_520
         let hourlyCountdown = RateLimitWindow(

@@ -95,13 +95,11 @@ public sealed class ProcessCommandRunner : ICommandRunner
 public interface IToolLocator
 {
     ToolCommand? FindCodexAuth();
-    ToolCommand? FindCodexCli();
 }
 
 public sealed class ToolLocator : IToolLocator
 {
     public ToolCommand? FindCodexAuth() => FindNpmTool("codex-auth", "@loongphy", "codex-auth");
-    public ToolCommand? FindCodexCli() => FindNpmTool("codex", "@openai", "codex");
 
     private static ToolCommand? FindNpmTool(string executableName, string scope, string packageName)
     {
@@ -167,18 +165,9 @@ public sealed class ToolLocator : IToolLocator
 
 public static class CodexAuthCommands
 {
-    public const string ActivationPrompt = "This is an automated quota-window activation from Codex Duo. Reply with OK only and do not use tools.";
-
     public static IReadOnlyList<string> SwitchAccount(string accountKey) => ["switch", accountKey, "--json"];
     public static IReadOnlyList<string> LegacySwitchAccount(string selector) => ["switch", selector];
     public static IReadOnlyList<string> SetAlias(string selector, string? alias) =>
         string.IsNullOrWhiteSpace(alias) ? ["alias", "clear", selector] : ["alias", "set", selector, alias.Trim()];
     public static IReadOnlyList<string> RemoveAccount(string selector) => ["remove", selector];
-    public static IReadOnlyList<string> ActivateQuota() =>
-    [
-        "exec", "--ephemeral", "--ignore-user-config", "--ignore-rules",
-        "--skip-git-repo-check", "--sandbox", "read-only",
-        "--model", "gpt-5.4-mini", "--config", "model_reasoning_effort=\"low\"",
-        ActivationPrompt,
-    ];
 }

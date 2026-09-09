@@ -11,11 +11,15 @@ public static class DetachedStartup
     public static bool IsDetachedLaunch(IReadOnlyList<string> arguments) =>
         arguments.Contains(DetachedArgument, StringComparer.OrdinalIgnoreCase);
 
-    public static bool TryRelaunchIndependent(string executablePath, int currentProcessId, out string? error)
+    public static bool TryRelaunchIndependent(
+        string executablePath,
+        int currentProcessId,
+        IReadOnlyList<string> originalArguments,
+        out string? error)
     {
         error = null;
         var taskName = $"CodexDuo.Detach.{Guid.NewGuid():N}";
-        var launchArguments = $"{Quote(executablePath)} {DetachedArgument} {ParentArgument} {currentProcessId} {TaskArgument} {taskName}";
+        var launchArguments = BuildTaskCommandLine(executablePath, currentProcessId, taskName, originalArguments);
         var startAt = DateTime.Now.AddMinutes(1).ToString("HH:mm", System.Globalization.CultureInfo.InvariantCulture);
 
         var create = RunTaskScheduler([
@@ -34,6 +38,24 @@ public static class DetachedStartup
         _ = RunTaskScheduler(["/Delete", "/TN", taskName, "/F"]);
         error = run.StandardError;
         return false;
+    }
+
+    public static string BuildTaskCommandLine(
+        string executablePath,
+        int currentProcessId,
+        string taskName,
+        IReadOnlyList<string> originalArguments)
+    {
+        string[] metadata =
+        [
+            executablePath,
+            DetachedArgument,
+            ParentArgument,
+            currentProcessId.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            TaskArgument,
+            taskName,
+        ];
+        return string.Join(" ", metadata.Concat(originalArguments).Select(Quote));
     }
 
     public static void CompleteDetachedLaunch(IReadOnlyList<string> arguments)
@@ -99,5 +121,29 @@ public static class DetachedStartup
         }
     }
 
-    private static string Quote(string value) => "\"" + value.Replace("\"", "\\\"", StringComparison.Ordinal) + "\"";
+    private static string Quote(string value)
+    {
+        var result = new System.Text.StringBuilder(value.Length + 2).Append('"');
+        var backslashCount = 0;
+        foreach (var character in value)
+        {
+            if (character == '\\')
+            {
+                backslashCount++;
+                continue;
+            }
+
+            if (character == '"')
+            {
+                result.Append('\\', backslashCount * 2 + 1).Append(character);
+                backslashCount = 0;
+                continue;
+            }
+
+            result.Append('\\', backslashCount).Append(character);
+            backslashCount = 0;
+        }
+
+        return result.Append('\\', backslashCount * 2).Append('"').ToString();
+    }
 }

@@ -12,6 +12,7 @@
     <ApplicationIcon>Resources\CodexDuo.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <StartupObject>CodexDuo.Windows.App</StartupObject>
+    <SyncInstalledCodexDuo Condition="'$(SyncInstalledCodexDuo)' == ''">true</SyncInstalledCodexDuo>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\CodexDuo.Windows.Core\CodexDuo.Windows.Core.csproj" />
@@ -19,6 +20,15 @@
   </ItemGroup>
   <ItemGroup>
     <Resource Include="Resources\CodexDuo.ico" />
+    <Resource Include="Resources\CodexDuo.Tray.ico" />
     <Resource Include="Resources\CodexDuo.png" />
   </ItemGroup>
+  <Target Name="SyncInstalledCodexDuoAfterBuild" AfterTargets="Build"
+          Condition="'$(OS)' == 'Windows_NT'
+            and '$(DesignTimeBuild)' != 'true'
+            and '$(CI)' != 'true'
+            and '$(RuntimeIdentifier)' == ''
+            and '$(SyncInstalledCodexDuo)' == 'true'">
+    <Exec Command="powershell.exe -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\..\..\Scripts\sync_windows_build.ps1&quot; -BuildExecutable &quot;$(TargetDir)CodexDuo.exe&quot;" />
+  </Target>
 </Project>

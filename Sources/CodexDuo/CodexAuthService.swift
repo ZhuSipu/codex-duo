@@ -161,48 +161,6 @@ final class CodexAuthService {
         return CommandResult(status: 0, stdout: switchResult.stdout, stderr: "")
     }
 
-    func activateRefreshedAccountAndRestartCodex(selector: String, expectedAccountKey: String) -> CommandResult {
-        let stopResult = self.stopCodexApp()
-        guard stopResult.succeeded else { return stopResult }
-
-        let switchResult = self.runCodexAuth(arguments: CodexAuthCommands.switchAccount(selector: selector))
-        guard switchResult.succeeded else {
-            _ = self.openCodexApp()
-            return switchResult
-        }
-
-        do {
-            let registry = try self.loadRegistry()
-            guard registry.activeAccountKey == expectedAccountKey else {
-                _ = self.openCodexApp()
-                return CommandResult(status: 2, stdout: switchResult.stdout, stderr: "The active account did not match the refreshed account.")
-            }
-        } catch {
-            _ = self.openCodexApp()
-            return CommandResult(status: 3, stdout: switchResult.stdout, stderr: error.localizedDescription)
-        }
-
-        guard let codexURL = self.codexExecutableURL() else {
-            _ = self.openCodexApp()
-            return CommandResult(status: 127, stdout: switchResult.stdout, stderr: "Codex CLI was not found, so the refreshed window could not be activated.")
-        }
-        let activation = self.runExecutable(
-            path: codexURL.path,
-            arguments: CodexAuthCommands.activateQuota(),
-            currentDirectoryURL: self.fileManager.temporaryDirectory,
-            timeout: 45,
-            captureOutput: false)
-        guard activation.succeeded else {
-            _ = self.openCodexApp()
-            return activation
-        }
-
-        _ = self.runCodexAuth(arguments: ["list", "--active"], timeout: 30, captureOutput: false)
-        let launchResult = self.openCodexApp()
-        guard launchResult.succeeded else { return launchResult }
-        return CommandResult(status: 0, stdout: activation.stdout, stderr: "")
-    }
-
     private func stopCodexApp() -> CommandResult {
         var applications = NSRunningApplication.runningApplications(withBundleIdentifier: self.codexBundleIdentifier)
         guard !applications.isEmpty else { return CommandResult(status: 0, stdout: "", stderr: "") }
@@ -239,15 +197,6 @@ final class CodexAuthService {
             self.fileManager.homeDirectoryForCurrentUser.appendingPathComponent(".local/bin/codex-auth"),
             URL(fileURLWithPath: "/opt/homebrew/bin/codex-auth"),
             URL(fileURLWithPath: "/usr/local/bin/codex-auth"),
-        ]
-        return candidates.first { self.fileManager.isExecutableFile(atPath: $0.path) }
-    }
-
-    private func codexExecutableURL() -> URL? {
-        let candidates = [
-            self.fileManager.homeDirectoryForCurrentUser.appendingPathComponent(".local/bin/codex"),
-            URL(fileURLWithPath: "/opt/homebrew/bin/codex"),
-            URL(fileURLWithPath: "/usr/local/bin/codex"),
         ]
         return candidates.first { self.fileManager.isExecutableFile(atPath: $0.path) }
     }
