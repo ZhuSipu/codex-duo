@@ -17,7 +17,6 @@ Shared macOS and Windows behavior is defined in [`docs/feature-spec.md`](docs/fe
 - Live updates while the macOS menu remains open, including newly appearing usage windows.
 - Adaptive multi-window layout, including 5-hour, weekly, and Free monthly quotas.
 - Reset countdowns with day, hour, and minute precision.
-- Optional Windows quota activation for refreshed weekly accounts.
 - Direct, confirmation-free account-row switching followed by a verified Codex App restart.
 - Native account setup for adding, renaming, removing, and refreshing up to ten accounts.
 - System, Light, and Dark appearance modes with improved light-mode hover feedback.
@@ -74,7 +73,6 @@ Download `Codex-Duo-1.0.0-Windows-x64-Setup.exe` for a per-user installation, or
 - **Automatic refresh:** Off or every 1, 2, 5, 10, or 15 minutes. Off keeps cached usage visible and disables API-backed refresh until Refresh Now is selected.
 - **Proxy:** On macOS, leave blank to use the current process or macOS system proxy, or enter a credential-free `http`, `https`, `socks5`, or `socks5h` URL. Windows imports enabled system proxy settings when process-level proxy variables are absent.
 - **Startup:** Register or unregister Codex Duo with macOS Login Items or the Windows per-user Run entry.
-- **Quota activation (Windows):** Enabled by default. A refreshed weekly account is selected automatically and receives one ephemeral activation message; the option can be disabled explicitly.
 - **Accounts:** Add an account through Terminal, rename an alias, remove a selected account with confirmation, or refresh usage manually.
 
 Click a non-current account row in the menu to switch immediately. Clicking the current account never invokes a switch. Switching terminates and relaunches Codex, so stop any active response first.
@@ -101,6 +99,8 @@ dotnet test Windows/CodexDuo.Windows.sln -c Release
 ```
 
 Windows release files are written to `dist/`. Set `CODEX_DUO_SIGN_THUMBPRINT` and optionally `CODEX_DUO_TIMESTAMP_URL` to Authenticode-sign the executable and installer.
+
+On a Windows machine with the per-user app installed, ordinary `dotnet build` commands automatically synchronize the successful build to the installed Codex Duo directory and restart Codex Duo. Pass `-p:SyncInstalledCodexDuo=false` to build without updating the running app. Runtime-specific publish and CI builds skip live synchronization.
 
 ## Build and test
 

@@ -87,32 +87,6 @@ public sealed class CodexAccount
         };
     }
 
-    public long? WeeklyRefreshBoundary(CodexAccount? previous, DateTimeOffset now)
-    {
-        var current = LastUsage?.Weekly;
-        if (current?.ResetsAt is not { } currentReset)
-        {
-            return null;
-        }
-
-        if (currentReset <= now.ToUnixTimeSeconds())
-        {
-            return (long)Math.Floor(currentReset);
-        }
-
-        if (current.RemainingPercent(now) == 100)
-        {
-            return (long)Math.Floor(currentReset - (current.WindowMinutes ?? 10_080) * 60d);
-        }
-
-        var previousReset = previous?.LastUsage?.Weekly?.ResetsAt;
-        if (previousReset is not null && previousReset <= now.ToUnixTimeSeconds() && currentReset > previousReset)
-        {
-            return (long)Math.Floor(previousReset.Value);
-        }
-
-        return null;
-    }
 }
 
 public sealed class UsageSnapshot
@@ -187,27 +161,4 @@ public sealed class RateLimitWindow
         return hours > 0 ? (minutes > 0 ? $"{hours}h {minutes}min" : $"{hours}h") : $"{minutes}min";
     }
 
-    public string? DisplayResetText(DateTimeOffset? activationStart, DateTimeOffset now)
-    {
-        if (WindowMinutes != 10_080 || RemainingPercent(now) != 100)
-        {
-            return ResetText(now);
-        }
-
-        if (activationStart is { } start)
-        {
-            var anchoredReset = start.AddDays(7);
-            if (anchoredReset > now)
-            {
-                return new RateLimitWindow
-                {
-                    UsedPercent = UsedPercent,
-                    WindowMinutes = WindowMinutes,
-                    ResetsAt = anchoredReset.ToUnixTimeMilliseconds() / 1000d,
-                }.ResetText(now);
-            }
-        }
-
-        return "7d";
-    }
 }

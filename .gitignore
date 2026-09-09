@@ -8,4 +8,5 @@ xcuserdata/
 DerivedData/
 [Bb]in/
 [Oo]bj/
+__pycache__/
 handover.md

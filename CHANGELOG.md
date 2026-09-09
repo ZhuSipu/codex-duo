@@ -5,10 +5,12 @@ All notable changes to Codex Duo are documented here.
 ## 1.0.0 - 2026-08-26
 
 - Add a new independent Windows implementation built from the shared behavior specification with .NET 8 and WPF.
-- Add a native system-tray account panel, manual and scheduled refresh, verified switching, account management, appearance, localization, startup, and quota activation.
-- Add safe Node-based discovery for `codex-auth` and Codex CLI commands without shell-interpolating account selectors.
+- Add a native system-tray account panel, manual and scheduled refresh, verified switching, account management, appearance, localization, and startup.
+- Add safe Node-based discovery for `codex-auth` commands without shell-interpolating account selectors.
 - Add a self-contained Windows portable build, per-user Inno Setup installer, optional Authenticode signing, SHA-256 checksums, Windows CI, and cross-platform release publishing.
-- Add Windows model and behavior tests for shared configuration defaults, account selection, quota semantics, stale ages, timeout handling, and activation bookkeeping.
+- Add Windows model and behavior tests for shared configuration defaults, account selection, quota semantics, stale ages, and timeout handling.
+- Keep the Windows tray process independent from Codex on every launch so a forced Codex restart cannot terminate Codex Duo before the account switch runs.
+- Preserve Windows launch options across detached startup, improve long localized settings labels, and add an in-app guide for keeping the tray icon visible.
 
 ## 0.9.0 - 2026-08-26
 

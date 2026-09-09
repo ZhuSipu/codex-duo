@@ -62,7 +62,6 @@ Each platform may use native preference storage. The logical fields and defaults
 | `language` | `system`, `en`, `zh-Hans`, `zh-Hant`, `ja`, `ko`, `es`, `fr`, `de` | `system` | `system` resolves from the OS language; unsupported languages fall back to English. |
 | `refreshIntervalSeconds` | `0`, `60`, `120`, `300`, `600`, `900` | `120` | `0` disables scheduled API-backed refresh. |
 | `customProxyURL` (macOS) | empty or credential-free `http`, `https`, `socks5`, or `socks5h` URL | empty | Used for `codex-auth` only when no process-level proxy variables are set. |
-| `autoActivateRefreshedAccounts` (Windows) | boolean | `true` | Enables the Windows weekly-quota activation workflow. |
 | `launchAtLogin` | boolean | `false` | Reflect and change the platform's real startup-registration state. |
 
 Internal migration or bookkeeping fields may be platform-specific. They must not change these defaults for a new installation without a specification update.
@@ -105,11 +104,9 @@ Refreshes must not overlap with another refresh or account switch. After a succe
 
 If a successful command exit contains `TimedOut`, treat it as refresh failure rather than fresh usage. Keep the newest verified cached values and display a persistent warning until a real refresh succeeds.
 
-When automatic refresh is Off, macOS performs no scheduled refresh. Windows may continue its two-minute activation check while Windows quota activation is enabled.
+When automatic refresh is Off, no scheduled refresh is required.
 
 Proxy routing preserves existing process-level proxy environment variables. macOS then checks its credential-free custom proxy setting and enabled system proxy settings; Windows imports enabled per-user Windows proxy settings. Proxy credentials must not be stored in application preferences; authenticated proxies use standard environment variables.
-
-Windows may activate a newly refreshed weekly quota by switching to one eligible account, sending one bounded ephemeral Codex message, refreshing usage, and relaunching Codex. It records successful windows to avoid duplicate activation and applies a cooldown after failure. This workflow is Windows-specific and is not performed by macOS.
 
 ## 8. User operations
 
@@ -198,7 +195,6 @@ Status values are **Implemented**, **Planned**, **Partial**, or **Not applicable
 | Appearance modes | Implemented | Implemented | Native rendering differs. |
 | Nine language choices including System | Implemented | Implemented | Both settings surfaces expose the same choices and system fallback. |
 | Launch at login | Implemented | Implemented | Windows uses a verified per-user Run entry. |
-| Weekly quota activation | Not applicable | Implemented | Windows-only ephemeral activation with cooldown and success bookkeeping. |
 | Verified local usage reconciliation | Implemented | Planned | Windows source and feasibility must be designed independently. |
 | macOS build/test CI | Implemented | Not applicable | Independent GitHub Actions job. |
 | Windows build/test CI | Not applicable | Implemented | Independent .NET build, test, and self-contained publish job. |

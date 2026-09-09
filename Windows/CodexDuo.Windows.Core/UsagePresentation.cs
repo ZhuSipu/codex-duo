@@ -11,7 +11,6 @@ public static class AccountUsagePresentation
 {
     public static IReadOnlyList<UsageMeterPresentation> Build(
         CodexAccount account,
-        AppSettings settings,
         DateTimeOffset now)
     {
         var result = new List<UsageMeterPresentation>(2);
@@ -21,10 +20,7 @@ public static class AccountUsagePresentation
         }
         if (account.LastUsage?.Weekly is { } weekly)
         {
-            result.Add(new UsageMeterPresentation(
-                "WEEK",
-                weekly.RemainingPercent(now),
-                weekly.DisplayResetText(settings.ActivationStart(account.AccountKey), now)));
+            result.Add(new UsageMeterPresentation("WEEK", weekly.RemainingPercent(now), weekly.ResetText(now)));
         }
         if (result.Count == 0) result.Add(new UsageMeterPresentation("USAGE", null, null));
         return result;

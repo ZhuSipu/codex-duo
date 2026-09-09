@@ -12,7 +12,6 @@ public sealed class BehaviorTests
         Assert.Equal("system", settings.Language);
         Assert.Equal(120, settings.RefreshIntervalSeconds);
         Assert.False(settings.LaunchAtLogin);
-        Assert.True(settings.AutoActivateRefreshedAccounts);
     }
 
     [Fact]
@@ -23,21 +22,6 @@ public sealed class BehaviorTests
         Assert.Equal("system", settings.Appearance);
         Assert.Equal("system", settings.Language);
         Assert.Equal(120, settings.RefreshIntervalSeconds);
-    }
-
-    [Fact]
-    public void Activation_RetriesAfterOneHourAndNeverRepeatsSuccessfulWindow()
-    {
-        var now = DateTimeOffset.FromUnixTimeSeconds(2_000_000_000);
-        var settings = new AppSettings();
-        settings.AutoActivationAttempts["account"] = now.AddMinutes(-59).ToUnixTimeSeconds();
-        Assert.False(settings.ShouldAttemptActivation("account", 1_900_000_000, now));
-
-        settings.AutoActivationAttempts["account"] = now.AddHours(-1).ToUnixTimeSeconds();
-        Assert.True(settings.ShouldAttemptActivation("account", 1_900_000_000, now));
-
-        settings.AutoActivationSuccesses["account"] = 1_900_000_000;
-        Assert.False(settings.ShouldAttemptActivation("account", 1_900_000_000, now));
     }
 
     [Fact]
@@ -123,6 +107,38 @@ public sealed class BehaviorTests
         Assert.True(DetachedStartup.IsDetachedLaunch(arguments));
         Assert.Equal("42", DetachedStartup.ValueAfter(arguments, DetachedStartup.ParentArgument));
         Assert.Equal("task-name", DetachedStartup.ValueAfter(arguments, DetachedStartup.TaskArgument));
+    }
+
+    [Fact]
+    public void DetachedStartup_ForwardsOriginalLaunchArguments()
+    {
+        var commandLine = DetachedStartup.BuildTaskCommandLine(
+            @"C:\Program Files\Codex Duo\CodexDuo.exe",
+            42,
+            "task-name",
+            ["--settings", "value with spaces", @"trailing\"]);
+
+        Assert.Contains("\"--settings\"", commandLine, StringComparison.Ordinal);
+        Assert.Contains("\"value with spaces\"", commandLine, StringComparison.Ordinal);
+        Assert.EndsWith("\"trailing\\\\\"", commandLine, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("en")]
+    [InlineData("zh-Hans")]
+    [InlineData("zh-Hant")]
+    [InlineData("ja")]
+    [InlineData("ko")]
+    [InlineData("es")]
+    [InlineData("fr")]
+    [InlineData("de")]
+    public void TrayVisibilityGuide_IsLocalized(string language)
+    {
+        var text = new Localizer(language);
+
+        Assert.NotEqual("trayGuideTitle", text["trayGuideTitle"]);
+        Assert.NotEqual("trayGuideSteps", text["trayGuideSteps"]);
+        Assert.NotEqual("openTaskbarSettings", text["openTaskbarSettings"]);
     }
 
     [Fact]
@@ -228,7 +244,7 @@ public sealed class BehaviorTests
             },
         };
 
-        var meters = AccountUsagePresentation.Build(account, new AppSettings(), now);
+        var meters = AccountUsagePresentation.Build(account, now);
 
         Assert.Collection(
             meters,
@@ -248,7 +264,7 @@ public sealed class BehaviorTests
             },
         };
 
-        var meter = Assert.Single(AccountUsagePresentation.Build(account, new AppSettings(), now));
+        var meter = Assert.Single(AccountUsagePresentation.Build(account, now));
         Assert.Equal("WEEK", meter.Label);
         Assert.Equal(87, meter.Remaining);
     }
@@ -258,7 +274,6 @@ public sealed class BehaviorTests
     {
         var meter = Assert.Single(AccountUsagePresentation.Build(
             new CodexAccount(),
-            new AppSettings(),
             DateTimeOffset.FromUnixTimeSeconds(2_000_000_000)));
 
         Assert.Equal("USAGE", meter.Label);

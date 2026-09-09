@@ -12,7 +12,7 @@ namespace CodexDuo.Windows;
 
 public sealed class AccountViewModel
 {
-    public AccountViewModel(CodexAccount account, bool active, bool showsSeparator, AppSettings settings, Localizer text, MainViewModel owner, DateTimeOffset now)
+    public AccountViewModel(CodexAccount account, bool active, bool showsSeparator, Localizer text, MainViewModel owner, DateTimeOffset now)
     {
         Account = account;
         IsActive = active;
@@ -27,7 +27,7 @@ public sealed class AccountViewModel
         FiveHourLabel = "5H";
         WeeklyLabel = "WEEK";
         RemainingLabel = text["remaining"];
-        UsageMeters = AccountUsagePresentation.Build(account, settings, now);
+        UsageMeters = AccountUsagePresentation.Build(account, now);
         SwitchCommand = new AsyncCommand(() => owner.SwitchAccountAsync(account), () => !IsActive && !owner.IsBusy);
     }
 
@@ -71,6 +71,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         settings = settingsStore.Load();
         settings.LaunchAtLogin = StartupManager.IsEnabled(Environment.ProcessPath ?? string.Empty);
         text = new Localizer(settings.Language);
+        TypographyManager.Apply(settings.Language);
         Accounts = [];
         RefreshCommand = new AsyncCommand(() => RefreshAsync(manual: true), () => !IsBusy);
         refreshTimer.Tick += async (_, _) => await RefreshAsync(manual: false);
@@ -147,7 +148,6 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     {
         await RunExclusiveAsync(async () =>
         {
-            var previous = registry;
             var result = await auth.RefreshAsync();
             if (!result.Succeeded)
             {
@@ -158,10 +158,6 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
             Warning = null;
             LoadRegistry();
-            if (registry is not null && settings.AutoActivateRefreshedAccounts)
-            {
-                await TryActivateOneAccountAsync(previous, registry);
-            }
         }, manual ? "Another account operation is already running." : null);
     }
 
@@ -241,67 +237,11 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         settingsStore.Save(settings);
         text = new Localizer(settings.Language);
         ThemeManager.Apply(settings.Appearance);
+        TypographyManager.Apply(settings.Language);
         ConfigureTimer();
         RebuildAccounts();
         OnPropertyChanged(string.Empty);
         SettingsApplied?.Invoke(this, EventArgs.Empty);
-    }
-
-    private async Task TryActivateOneAccountAsync(CodexRegistry? previous, CodexRegistry current)
-    {
-        var now = DateTimeOffset.Now;
-        var candidate = current.Accounts
-            .Select(account => new
-            {
-                Account = account,
-                Boundary = account.WeeklyRefreshBoundary(previous?.Accounts.FirstOrDefault(item => item.AccountKey == account.AccountKey), now),
-            })
-            .Where(item => item.Boundary is not null
-                && item.Account.LastUsage?.Weekly?.RemainingPercent(now) == 100
-                && settings.ShouldAttemptActivation(item.Account.AccountKey, item.Boundary!.Value, now))
-            .OrderBy(item => item.Boundary)
-            .FirstOrDefault();
-        if (candidate is null) return;
-
-        settings.AutoActivationAttempts[candidate.Account.AccountKey] = now.ToUnixTimeSeconds();
-        settingsStore.Save(settings);
-        DiagnosticLog.Write("activation.begin");
-        var stop = await CodexAppController.StopAsync();
-        if (!stop.Succeeded) { Warning = stop.SafeError("Codex could not be closed for quota activation."); return; }
-        var activationCompleted = false;
-        try
-        {
-            var switched = await auth.SwitchAsync(candidate.Account.AccountKey, candidate.Account.CommandSelector);
-            if (!switched.Succeeded) { Warning = switched.SafeError("Quota activation account switch failed."); return; }
-            var verified = auth.LoadRegistry();
-            if (verified.ActiveAccountKey != candidate.Account.AccountKey)
-            {
-                Warning = "The active account did not match the refreshed account.";
-                return;
-            }
-
-            var activated = await auth.ActivateQuotaAsync();
-            if (!activated.Succeeded) { Warning = activated.SafeError("Quota activation failed."); return; }
-            await auth.RefreshActiveAsync();
-            activationCompleted = true;
-        }
-        finally
-        {
-            var launch = await CodexAppController.LaunchAndWaitAsync();
-            if (!launch.Succeeded)
-            {
-                var launchError = launch.SafeError("Codex could not be launched after quota activation.");
-                Warning = string.IsNullOrWhiteSpace(Warning) ? launchError : $"{Warning} {launchError}";
-                activationCompleted = false;
-            }
-            DiagnosticLog.Write(launch.Succeeded ? "activation.relaunch-complete" : "activation.relaunch-failed");
-        }
-        if (!activationCompleted) return;
-
-        settings.AutoActivationSuccesses[candidate.Account.AccountKey] = DateTimeOffset.Now.ToUnixTimeSeconds();
-        settingsStore.Save(settings);
-        Warning = null;
-        LoadRegistry();
     }
 
     private async Task RunExclusiveAsync(Func<Task> operation, string? busyMessage)
@@ -332,7 +272,6 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
                     account,
                     account.AccountKey == registry.ActiveAccountKey,
                     index < displayAccounts.Count - 1,
-                    settings,
                     text,
                     this,
                     now));
@@ -355,9 +294,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     private void ConfigureTimer()
     {
         refreshTimer.Stop();
-        var seconds = settings.RefreshIntervalSeconds == 0
-            ? (settings.AutoActivateRefreshedAccounts ? 120 : 0)
-            : settings.RefreshIntervalSeconds;
+        var seconds = settings.RefreshIntervalSeconds;
         if (seconds <= 0) return;
         refreshTimer.Interval = TimeSpan.FromSeconds(seconds);
         refreshTimer.Start();
