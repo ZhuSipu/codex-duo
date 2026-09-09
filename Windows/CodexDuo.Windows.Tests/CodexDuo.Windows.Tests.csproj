@@ -29,6 +29,7 @@
     <None Include="..\CodexDuo.Windows\App.xaml.cs" Link="Fixtures\App.xaml.cs" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\CodexDuo.Windows\Infrastructure.cs" Link="Fixtures\Infrastructure.cs" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\CodexDuo.Windows\Resources\CodexDuo.Tray.ico" Link="Fixtures\CodexDuo.Tray.ico" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\CodexDuo.Windows\Resources\CodexDuo.Tray.Light.ico" Link="Fixtures\CodexDuo.Tray.Light.ico" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\CodexDuo.Windows\SettingsWindow.xaml" Link="Fixtures\SettingsWindow.xaml" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\CodexDuo.Windows\SettingsWindow.xaml.cs" Link="Fixtures\SettingsWindow.xaml.cs" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\CodexDuo.Windows\TrayWindow.xaml" Link="Fixtures\TrayWindow.xaml" CopyToOutputDirectory="PreserveNewest" />

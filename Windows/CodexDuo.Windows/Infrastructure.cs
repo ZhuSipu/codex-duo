@@ -131,10 +131,14 @@ public static class ThemeManager
         _ = DwmSetWindowAttribute(handle, WindowCornerPreference, ref corners, sizeof(int));
     }
 
-    private static bool SystemUsesDarkTheme()
+    public static bool SystemUsesDarkTheme() => !ReadLightThemeSetting("AppsUseLightTheme");
+
+    public static bool SystemTaskbarUsesDarkTheme() => !ReadLightThemeSetting("SystemUsesLightTheme");
+
+    private static bool ReadLightThemeSetting(string valueName)
     {
         using var key = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize");
-        return key?.GetValue("AppsUseLightTheme") is int value && value == 0;
+        return key?.GetValue(valueName) is not int value || value != 0;
     }
 
     [DllImport("dwmapi.dll")]
