@@ -53,3 +53,42 @@ Filename: "{app}\CodexDuo.exe"; Description: "Launch Codex Duo"; Flags: nowait p
 
 [UninstallRun]
 Filename: "{cmd}"; Parameters: "/c taskkill /IM CodexDuo.exe /T /F >nul 2>&1 & exit /b 0"; Flags: runhidden; RunOnceId: "StopCodexDuo"
+
+[Code]
+const
+  DotNetDesktopRuntimeUrl = 'https://aka.ms/dotnet/8.0/windowsdesktop-runtime-win-x64.exe';
+
+function HasDotNet8DesktopRuntime: Boolean;
+var
+  Versions: TArrayOfString;
+  Index: Integer;
+begin
+  Result := False;
+  if not RegGetValueNames(
+    HKLM32,
+    'SOFTWARE\dotnet\Setup\InstalledVersions\x64\sharedfx\Microsoft.WindowsDesktop.App',
+    Versions) then
+    Exit;
+
+  for Index := 0 to GetArrayLength(Versions) - 1 do
+    if Pos('8.', Versions[Index]) = 1 then
+    begin
+      Result := True;
+      Exit;
+    end;
+end;
+
+function InitializeSetup: Boolean;
+var
+  ResultCode: Integer;
+begin
+  Result := HasDotNet8DesktopRuntime;
+  if Result then
+    Exit;
+
+  if MsgBox(
+    'Codex Duo requires Microsoft .NET 8 Desktop Runtime (x64).' + #13#10 + #13#10 +
+    'Install the runtime, then run this installer again. Open the official Microsoft download now?',
+    mbConfirmation, MB_YESNO) = IDYES then
+    ShellExec('open', DotNetDesktopRuntimeUrl, '', '', SW_SHOWNORMAL, ewNoWait, ResultCode);
+end;

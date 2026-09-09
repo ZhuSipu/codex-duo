@@ -12,14 +12,17 @@ $projectXml = [xml](Get-Content -LiteralPath $project)
 $version = [string]$projectXml.Project.PropertyGroup.Version
 if ([string]::IsNullOrWhiteSpace($version)) { throw "The Windows project version is missing." }
 
-$publish = Join-Path $projectRoot "build\windows-$Runtime"
+$portablePublish = Join-Path $projectRoot "build\windows-$Runtime-portable"
+$installerPublish = Join-Path $projectRoot "build\windows-$Runtime-installer"
 $dist = Join-Path $projectRoot "dist"
 $architecture = $Runtime.Replace("win-", "")
 $zip = Join-Path $dist "Codex-Duo-$version-Windows-$architecture-portable.zip"
 $setup = Join-Path $dist "Codex-Duo-$version-Windows-$architecture-Setup.exe"
 
-if (Test-Path -LiteralPath $publish) { Remove-Item -LiteralPath $publish -Recurse -Force }
-New-Item -ItemType Directory -Force -Path $publish, $dist | Out-Null
+foreach ($publishDirectory in @($portablePublish, $installerPublish)) {
+    if (Test-Path -LiteralPath $publishDirectory) { Remove-Item -LiteralPath $publishDirectory -Recurse -Force }
+}
+New-Item -ItemType Directory -Force -Path $portablePublish, $installerPublish, $dist | Out-Null
 foreach ($artifact in @($zip, $setup)) {
     if (Test-Path -LiteralPath $artifact) { Remove-Item -LiteralPath $artifact -Force }
 }
@@ -29,11 +32,19 @@ if ($LASTEXITCODE -ne 0) { throw "Windows tests failed." }
 
 dotnet publish $project -c Release -r $Runtime --self-contained true `
     -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true `
-    -p:PublishReadyToRun=true -p:DebugType=None -o $publish --nologo
-if ($LASTEXITCODE -ne 0) { throw "Windows publish failed." }
+    -p:PublishReadyToRun=false -p:EnableCompressionInSingleFile=true `
+    -p:DebugType=None -o $portablePublish --nologo
+if ($LASTEXITCODE -ne 0) { throw "Windows portable publish failed." }
 
-$publishedExecutable = Join-Path $publish "CodexDuo.exe"
-if (-not (Test-Path -LiteralPath $publishedExecutable)) { throw "CodexDuo.exe was not produced." }
+dotnet publish $project -c Release -r $Runtime --self-contained false `
+    -p:PublishSingleFile=false -p:DebugType=None -o $installerPublish --nologo
+if ($LASTEXITCODE -ne 0) { throw "Windows installer publish failed." }
+
+$portableExecutable = Join-Path $portablePublish "CodexDuo.exe"
+$installerExecutable = Join-Path $installerPublish "CodexDuo.exe"
+foreach ($publishedExecutable in @($portableExecutable, $installerExecutable)) {
+    if (-not (Test-Path -LiteralPath $publishedExecutable)) { throw "CodexDuo.exe was not produced: $publishedExecutable" }
+}
 
 function Invoke-AuthenticodeSign([string]$Path) {
     if (-not $env:CODEX_DUO_SIGN_THUMBPRINT) { return }
@@ -48,8 +59,9 @@ function Invoke-AuthenticodeSign([string]$Path) {
     if ($LASTEXITCODE -ne 0) { throw "Authenticode signing failed: $Path" }
 }
 
-Invoke-AuthenticodeSign $publishedExecutable
-Compress-Archive -LiteralPath (Get-ChildItem -LiteralPath $publish).FullName -DestinationPath $zip -CompressionLevel Optimal
+Invoke-AuthenticodeSign $portableExecutable
+Invoke-AuthenticodeSign $installerExecutable
+Compress-Archive -LiteralPath (Get-ChildItem -LiteralPath $portablePublish).FullName -DestinationPath $zip -CompressionLevel Optimal
 
 if (-not $SkipInstaller) {
     $iscc = (Get-Command ISCC.exe -ErrorAction SilentlyContinue).Source
@@ -58,7 +70,7 @@ if (-not $SkipInstaller) {
         $iscc = $candidates | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
     }
     if (-not $iscc) { throw "Inno Setup 6 was not found. Install it with winget install JRSoftware.InnoSetup." }
-    & $iscc "/DPublishDir=$publish" "/DOutputDir=$dist" "/DAppVersion=$version" "/DArchitecture=$architecture" (Join-Path $projectRoot "Windows\installer.iss")
+    & $iscc "/DPublishDir=$installerPublish" "/DOutputDir=$dist" "/DAppVersion=$version" "/DArchitecture=$architecture" (Join-Path $projectRoot "Windows\installer.iss")
     if ($LASTEXITCODE -ne 0) { throw "Inno Setup packaging failed." }
     if (-not (Test-Path -LiteralPath $setup)) { throw "The Windows installer was not produced." }
     Invoke-AuthenticodeSign $setup
