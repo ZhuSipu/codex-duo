@@ -83,24 +83,29 @@ public sealed class XamlBindingTests
     }
 
     [Fact]
-    public void SettingsWindow_UsesACompactSingleColumnProductSurface()
+    public void SettingsWindow_UsesCompactGroupedProductSurfaces()
     {
         var document = XDocument.Load(Path.Combine(AppContext.BaseDirectory, "Fixtures", "SettingsWindow.xaml"));
         XNamespace presentation = "http://schemas.microsoft.com/winfx/2006/xaml/presentation";
         XNamespace x = "http://schemas.microsoft.com/winfx/2006/xaml";
 
-        var surface = Assert.Single(document.Descendants(presentation + "Border"), element =>
-            (string?)element.Attribute(x + "Name") == "SettingsSurface");
-        Assert.Equal("{StaticResource Surface}", (string?)surface.Attribute("Style"));
+        string[] surfaceNames = ["GeneralSurface", "AccountsSurface", "TrayGuideSurface"];
+        foreach (var name in surfaceNames)
+        {
+            var surface = Assert.Single(document.Descendants(presentation + "Border"), element =>
+                (string?)element.Attribute(x + "Name") == name);
+            Assert.Equal("{StaticResource Surface}", (string?)surface.Attribute("Style"));
+        }
 
         var window = Assert.Single(document.Elements(presentation + "Window"));
-        Assert.Equal("560", (string?)window.Attribute("Width"));
-        Assert.Single(surface.Elements(presentation + "ScrollViewer"));
-        Assert.Empty(surface.Elements(presentation + "Grid"));
+        Assert.Equal("520", (string?)window.Attribute("Width"));
+        var scrollViewer = Assert.Single(document.Descendants(presentation + "ScrollViewer"));
+        Assert.All(surfaceNames, name => Assert.Contains(scrollViewer.Descendants(presentation + "Border"), element =>
+            (string?)element.Attribute(x + "Name") == name));
 
         var accountList = Assert.Single(document.Descendants(presentation + "ListBox"), element =>
             (string?)element.Attribute(x + "Name") == "AccountList");
-        Assert.Equal("112", (string?)accountList.Attribute("MaxHeight"));
+        Assert.Equal("144", (string?)accountList.Attribute("MaxHeight"));
 
         string[] alignedControls = ["LanguageBox", "AppearanceControl", "IntervalBox", "StartupCheck"];
         foreach (var name in alignedControls)
