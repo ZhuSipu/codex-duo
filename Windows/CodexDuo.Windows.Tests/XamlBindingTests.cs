@@ -103,7 +103,7 @@ public sealed class XamlBindingTests
 
         var window = Assert.Single(document.Elements(presentation + "Window"));
         Assert.Equal("520", (string?)window.Attribute("Width"));
-        Assert.Equal("580", (string?)window.Attribute("Height"));
+        Assert.Equal("592", (string?)window.Attribute("Height"));
         Assert.DoesNotContain(document.Descendants(), element =>
             (string?)element.Attribute(x + "Name") == "PageTitle");
         var scrollViewer = Assert.Single(document.Descendants(presentation + "ScrollViewer"));
@@ -112,7 +112,10 @@ public sealed class XamlBindingTests
 
         var accountList = Assert.Single(document.Descendants(presentation + "ListBox"), element =>
             (string?)element.Attribute(x + "Name") == "AccountList");
-        Assert.Equal("144", (string?)accountList.Attribute("MaxHeight"));
+        Assert.Equal("146", (string?)accountList.Attribute("MaxHeight"));
+        Assert.Equal(
+            "{Binding Accounts.Count, Converter={StaticResource AccountScrollVisibility}}",
+            (string?)accountList.Attribute("ScrollViewer.VerticalScrollBarVisibility"));
 
         string[] alignedControls = ["LanguageBox", "AppearanceControl", "IntervalBox", "StartupCheck"];
         foreach (var name in alignedControls)
