@@ -37,6 +37,17 @@ DisableProgramGroupPage=yes
 [Files]
 Source: "{#PublishDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
+[InstallDelete]
+Type: files; Name: "{app}\CodexDuo.pdb"
+Type: files; Name: "{app}\CodexDuo.Windows.Core.pdb"
+Type: files; Name: "{app}\D3DCompiler_47_cor3.dll"
+Type: files; Name: "{app}\Microsoft.Windows.SDK.NET.dll"
+Type: files; Name: "{app}\PenImc_cor3.dll"
+Type: files; Name: "{app}\PresentationNative_cor3.dll"
+Type: files; Name: "{app}\vcruntime140_cor3.dll"
+Type: files; Name: "{app}\WinRT.Runtime.dll"
+Type: files; Name: "{app}\wpfgfx_cor3.dll"
+
 [Icons]
 Name: "{group}\Codex Duo"; Filename: "{app}\CodexDuo.exe"
 Name: "{userdesktop}\Codex Duo"; Filename: "{app}\CodexDuo.exe"; Tasks: desktopicon
