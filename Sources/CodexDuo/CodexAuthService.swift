@@ -15,6 +15,7 @@ final class CodexAuthService {
     static let shared = CodexAuthService()
 
     private let fileManager = FileManager.default
+    private let customProxyURLProvider: () -> String
     private let codexBundleIdentifier = "com.openai.codex"
     private let localUsageReader = LocalCodexUsageReader()
     private let localUsageStore = LocalUsageStore()
@@ -22,6 +23,10 @@ final class CodexAuthService {
     private let localUsageStateLock = NSLock()
     private var observedActiveAccountKey: String?
     private var activeAccountObservedAt = Date()
+
+    init(customProxyURLProvider: @escaping () -> String = { AppPreferences.shared.customProxyURL }) {
+        self.customProxyURLProvider = customProxyURLProvider
+    }
 
     var registryURL: URL {
         self.fileManager.homeDirectoryForCurrentUser
@@ -124,18 +129,60 @@ final class CodexAuthService {
         guard let executableURL = self.executableURL() else {
             return CommandResult(status: 127, stdout: "", stderr: "codex-auth was not found.")
         }
-        let command = "\(self.shellQuote(executableURL.path)) login"
-        let escaped = command
-            .replacingOccurrences(of: "\\", with: "\\\\")
-            .replacingOccurrences(of: "\"", with: "\\\"")
-        let appleScript = "tell application \"Terminal\" to do script \"\(escaped)\"\ntell application \"Terminal\" to activate"
-        return self.runExecutable(path: "/usr/bin/osascript", arguments: ["-e", appleScript])
+        let scriptURL = self.fileManager.temporaryDirectory
+            .appendingPathComponent("codex-duo-login-\(UUID().uuidString).command")
+        let outcomeURL = scriptURL.deletingPathExtension().appendingPathExtension("result")
+        let script = Self.loginScript(
+            executablePath: executableURL.path,
+            scriptPath: scriptURL.path,
+            outcomePath: outcomeURL.path)
+        do {
+            try Data(script.utf8).write(to: scriptURL, options: .atomic)
+            try self.fileManager.setAttributes([.posixPermissions: 0o700], ofItemAtPath: scriptURL.path)
+        } catch {
+            return CommandResult(status: 126, stdout: "", stderr: "Unable to prepare the login window: \(error.localizedDescription)")
+        }
+
+        let result = self.runExecutable(
+            path: "/usr/bin/open",
+            arguments: ["-a", "Terminal", scriptURL.path])
+        guard result.succeeded else {
+            try? self.fileManager.removeItem(at: scriptURL)
+            return result
+        }
+        return CommandResult(status: 0, stdout: outcomeURL.path, stderr: "")
+    }
+
+    static func loginScript(executablePath: String, scriptPath: String, outcomePath: String) -> String {
+        let executable = Self.shellQuoted(executablePath)
+        let script = Self.shellQuoted(scriptPath)
+        let outcome = Self.shellQuoted(outcomePath)
+        return """
+        #!/bin/zsh
+        login_script=\(script)
+        outcome_file=\(outcome)
+        trap 'rm -f -- "$login_script"' EXIT
+        printf '\\nCodex Duo account login\\n\\n'
+        \(executable) login
+        login_status=$?
+        printf '%d' $login_status > "$outcome_file"
+        if [[ $login_status -eq 0 ]]; then
+          printf '\\nLogin complete. Return to Codex Duo.\\n'
+          sleep 1
+        else
+          printf '\\nLogin failed (exit %d). Review the message above.\\n' $login_status
+          printf 'Press Return to close this window. '
+          read -r _
+        fi
+        exit $login_status
+        """
     }
 
     func switchAccountAndRestartCodex(selector: String, expectedAccountKey: String) -> CommandResult {
         let stopResult = self.stopCodexApp()
         guard stopResult.succeeded else { return stopResult }
 
+        let switchStartedAt = Date()
         let switchResult = self.runCodexAuth(arguments: CodexAuthCommands.switchAccount(selector: selector))
         guard switchResult.succeeded else {
             _ = self.openCodexApp()
@@ -158,49 +205,33 @@ final class CodexAuthService {
 
         let launchResult = self.openCodexApp()
         guard launchResult.succeeded else { return launchResult }
+        guard self.waitForCodexAppToLaunch(after: switchStartedAt, timeout: 10) else {
+            return CommandResult(
+                status: 6,
+                stdout: switchResult.stdout,
+                stderr: "Codex did not restart with the selected account.")
+        }
         return CommandResult(status: 0, stdout: switchResult.stdout, stderr: "")
     }
 
-    func activateRefreshedAccountAndRestartCodex(selector: String, expectedAccountKey: String) -> CommandResult {
-        let stopResult = self.stopCodexApp()
-        guard stopResult.succeeded else { return stopResult }
+    func isCodexRuntimeSynchronized(with registry: CodexRegistry) -> Bool {
+        let applications = NSRunningApplication.runningApplications(withBundleIdentifier: self.codexBundleIdentifier)
+        return Self.runtimeIsSynchronized(
+            appIsRunning: !applications.isEmpty,
+            launchDate: applications.compactMap(\.launchDate).min(),
+            activationTimeMilliseconds: registry.activeAccountActivatedAtMS)
+    }
 
-        let switchResult = self.runCodexAuth(arguments: CodexAuthCommands.switchAccount(selector: selector))
-        guard switchResult.succeeded else {
-            _ = self.openCodexApp()
-            return switchResult
-        }
-
-        do {
-            let registry = try self.loadRegistry()
-            guard registry.activeAccountKey == expectedAccountKey else {
-                _ = self.openCodexApp()
-                return CommandResult(status: 2, stdout: switchResult.stdout, stderr: "The active account did not match the refreshed account.")
-            }
-        } catch {
-            _ = self.openCodexApp()
-            return CommandResult(status: 3, stdout: switchResult.stdout, stderr: error.localizedDescription)
-        }
-
-        guard let codexURL = self.codexExecutableURL() else {
-            _ = self.openCodexApp()
-            return CommandResult(status: 127, stdout: switchResult.stdout, stderr: "Codex CLI was not found, so the refreshed window could not be activated.")
-        }
-        let activation = self.runExecutable(
-            path: codexURL.path,
-            arguments: CodexAuthCommands.activateQuota(),
-            currentDirectoryURL: self.fileManager.temporaryDirectory,
-            timeout: 45,
-            captureOutput: false)
-        guard activation.succeeded else {
-            _ = self.openCodexApp()
-            return activation
-        }
-
-        _ = self.runCodexAuth(arguments: ["list", "--active"], timeout: 30, captureOutput: false)
-        let launchResult = self.openCodexApp()
-        guard launchResult.succeeded else { return launchResult }
-        return CommandResult(status: 0, stdout: activation.stdout, stderr: "")
+    static func runtimeIsSynchronized(
+        appIsRunning: Bool,
+        launchDate: Date?,
+        activationTimeMilliseconds: Int64?) -> Bool
+    {
+        guard appIsRunning else { return true }
+        guard let activationTimeMilliseconds else { return true }
+        guard let launchDate else { return false }
+        let activationDate = Date(timeIntervalSince1970: Double(activationTimeMilliseconds) / 1_000)
+        return launchDate.addingTimeInterval(1) >= activationDate
     }
 
     private func stopCodexApp() -> CommandResult {
@@ -234,21 +265,28 @@ final class CodexAuthService {
         }
     }
 
+    private func waitForCodexAppToLaunch(after earliestLaunchDate: Date, timeout: TimeInterval) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            let applications = NSRunningApplication.runningApplications(withBundleIdentifier: self.codexBundleIdentifier)
+            if applications.contains(where: { ($0.launchDate ?? .distantPast) >= earliestLaunchDate }) {
+                return true
+            }
+            Thread.sleep(forTimeInterval: 0.25)
+        }
+        return false
+    }
+
     private func executableURL() -> URL? {
-        let candidates = [
+        var candidates: [URL] = []
+        if let bundledResources = Bundle.main.resourceURL {
+            candidates.append(bundledResources.appendingPathComponent("Helpers/codex-auth", isDirectory: false))
+        }
+        candidates.append(contentsOf: [
             self.fileManager.homeDirectoryForCurrentUser.appendingPathComponent(".local/bin/codex-auth"),
             URL(fileURLWithPath: "/opt/homebrew/bin/codex-auth"),
             URL(fileURLWithPath: "/usr/local/bin/codex-auth"),
-        ]
-        return candidates.first { self.fileManager.isExecutableFile(atPath: $0.path) }
-    }
-
-    private func codexExecutableURL() -> URL? {
-        let candidates = [
-            self.fileManager.homeDirectoryForCurrentUser.appendingPathComponent(".local/bin/codex"),
-            URL(fileURLWithPath: "/opt/homebrew/bin/codex"),
-            URL(fileURLWithPath: "/usr/local/bin/codex"),
-        ]
+        ])
         return candidates.first { self.fileManager.isExecutableFile(atPath: $0.path) }
     }
 
@@ -309,6 +347,60 @@ final class CodexAuthService {
         return environment
     }
 
+    static func normalizedProxyURL(_ value: String) -> String? {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return "" }
+        guard let components = URLComponents(string: trimmed),
+              let scheme = components.scheme?.lowercased(),
+              ["http", "https", "socks5", "socks5h"].contains(scheme),
+              components.host?.isEmpty == false,
+              components.user == nil,
+              components.password == nil,
+              components.query == nil,
+              components.fragment == nil,
+              components.path.isEmpty || components.path == "/",
+              components.port.map({ (1...65_535).contains($0) }) ?? true
+        else { return nil }
+        return trimmed
+    }
+
+    static func applyingProxyConfiguration(
+        customProxyURL: String,
+        systemSettings: [String: Any]?,
+        to source: [String: String]) -> [String: String]
+    {
+        guard !Self.containsProxyConfiguration(source) else { return source }
+        if let proxyURL = Self.normalizedProxyURL(customProxyURL), !proxyURL.isEmpty {
+            return Self.applyingCustomProxyURL(proxyURL, to: source)
+        }
+        guard let systemSettings else { return source }
+        return Self.applyingSystemProxySettings(systemSettings, to: source)
+    }
+
+    private static func containsProxyConfiguration(_ environment: [String: String]) -> Bool {
+        ["HTTP_PROXY", "http_proxy", "HTTPS_PROXY", "https_proxy", "ALL_PROXY", "all_proxy"].contains {
+            environment[$0]?.isEmpty == false
+        }
+    }
+
+    private static func applyingCustomProxyURL(_ proxyURL: String, to source: [String: String]) -> [String: String] {
+        guard let scheme = URLComponents(string: proxyURL)?.scheme?.lowercased() else { return source }
+        var environment = source
+        switch scheme {
+        case "http", "https":
+            environment["HTTP_PROXY"] = proxyURL
+            environment["http_proxy"] = proxyURL
+            environment["HTTPS_PROXY"] = proxyURL
+            environment["https_proxy"] = proxyURL
+        case "socks5", "socks5h":
+            environment["ALL_PROXY"] = proxyURL
+            environment["all_proxy"] = proxyURL
+        default:
+            break
+        }
+        return environment
+    }
+
     private func runExecutable(
         path: String,
         arguments: [String],
@@ -324,10 +416,11 @@ final class CodexAuthService {
         var environment = ProcessInfo.processInfo.environment
         let extraPath = self.fileManager.homeDirectoryForCurrentUser.appendingPathComponent(".local/bin").path
         environment["PATH"] = "\(extraPath):/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
-        if inheritSystemProxy,
-           let settings = SCDynamicStoreCopyProxies(nil) as? [String: Any]
-        {
-            environment = Self.applyingSystemProxySettings(settings, to: environment)
+        if inheritSystemProxy {
+            environment = Self.applyingProxyConfiguration(
+                customProxyURL: self.customProxyURLProvider(),
+                systemSettings: SCDynamicStoreCopyProxies(nil) as? [String: Any],
+                to: environment)
         }
         process.environment = environment
 
@@ -364,7 +457,7 @@ final class CodexAuthService {
         }
     }
 
-    private func shellQuote(_ value: String) -> String {
+    private static func shellQuoted(_ value: String) -> String {
         "'\(value.replacingOccurrences(of: "'", with: "'\\''"))'"
     }
 }

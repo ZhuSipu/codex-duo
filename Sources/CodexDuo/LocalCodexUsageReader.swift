@@ -75,7 +75,7 @@ final class LocalCodexUsageReader {
 
         var clusters: [(reset: TimeInterval, sample: LocalUsageSample)] = []
         for sample in allSamples where sample.observedAt >= threshold {
-            guard let reset = sample.snapshot.weekly?.resetsAt else { continue }
+            guard let reset = sample.snapshot.preferredStatusWindow?.resetsAt else { continue }
             if let index = clusters.firstIndex(where: { abs($0.reset - reset) <= 300 }) {
                 if sample.observedAt > clusters[index].sample.observedAt {
                     clusters[index] = (reset, sample)

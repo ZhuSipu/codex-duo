@@ -11,13 +11,13 @@ Shared macOS and Windows behavior is defined in [`docs/feature-spec.md`](docs/fe
 - Native AppKit menu-bar interface.
 - Native .NET 8 WPF system-tray interface on Windows.
 - System-aware light and dark materials with restrained depth, highlights, and motion.
-- Compact weekly quota summary for the active account, with support for up to ten accounts.
+- Compact quota summary for the active account, including Free monthly windows, with support for up to ten accounts.
 - Adaptive usage meters: only windows reported by `codex-auth` are shown.
 - Visible `M/H/D OLD` age badges when a usage value has not been observed for at least 15 minutes.
 - Live updates while the macOS menu remains open, including newly appearing usage windows.
-- Automatic 5-hour/weekly two-column layout if the 300-minute window returns in the future.
-- Reset countdowns with day, hour, and minute precision; a full weekly quota remains at `7d` until its first message anchors the window.
-- Optional quota activation that switches to a refreshed weekly account and sends one ephemeral Codex message to anchor the next reset.
+- Adaptive multi-window layout, including 5-hour, weekly, and Free monthly quotas.
+- Reset countdowns with day, hour, and minute precision.
+- Optional Windows quota activation for refreshed weekly accounts.
 - Direct, confirmation-free account-row switching followed by a verified Codex App restart.
 - Native account setup for adding, renaming, removing, and refreshing up to ten accounts.
 - System, Light, and Dark appearance modes with improved light-mode hover feedback.
@@ -33,7 +33,9 @@ Shared macOS and Windows behavior is defined in [`docs/feature-spec.md`](docs/fe
 - Apple Silicon Mac for the release build.
 - Swift 5.10 command-line tools only when building from source.
 - The official Codex App.
-- [`codex-auth`](https://github.com/Loongphy/codex-auth) with one to ten configured accounts.
+- `codex-auth` is included in the macOS app bundle; Node.js and npm are not required.
+
+Every macOS release bundles the matching Apple Silicon `codex-auth` binary and its MIT license. Codex Duo uses that verified binary first, so a user can install the Mac app offline. A separately installed `codex-auth` in `~/.local/bin`, `/opt/homebrew/bin`, or `/usr/local/bin` remains a fallback for development and recovery.
 
 ### Windows
 
@@ -59,7 +61,7 @@ Download the DMG, open it, and drag **Codex Duo** to **Applications**. A ZIP is 
 
 The current personal build is ad-hoc signed, not Apple-notarized. On first launch, macOS may require Control-clicking the app in Applications and choosing **Open**. Do not bypass Gatekeeper for unrelated software.
 
-On first launch with no configured accounts, Codex Duo opens Settings once. Use **Add Account…** to start the official Codex login flow in Terminal. Repeat for each account, then choose **Refresh Now**. Authentication remains owned by Codex and `codex-auth`; Codex Duo never asks for a password or displays a token.
+On first launch with no configured accounts, Codex Duo opens Settings once. Choose **Add** to start the official Codex login flow in Terminal. Finish there and return to Codex Duo; the account list updates automatically. Authentication remains owned by Codex and `codex-auth`; Codex Duo never asks for a password or displays a token.
 
 ### Windows
 
@@ -70,8 +72,9 @@ Download `Codex-Duo-1.0.0-Windows-x64-Setup.exe` for a per-user installation, or
 - **Appearance:** Follow System, Light, or Dark. Changes apply immediately.
 - **Language:** Follow the system language or choose English, Simplified Chinese, Traditional Chinese, Japanese, Korean, Spanish, French, or German.
 - **Automatic refresh:** Off or every 1, 2, 5, 10, or 15 minutes. Off keeps cached usage visible and disables API-backed refresh until Refresh Now is selected.
+- **Proxy:** On macOS, leave blank to use the current process or macOS system proxy, or enter a credential-free `http`, `https`, `socks5`, or `socks5h` URL. Windows imports enabled system proxy settings when process-level proxy variables are absent.
 - **Startup:** Register or unregister Codex Duo with macOS Login Items or the Windows per-user Run entry.
-- **Quota activation:** Enabled by default. A refreshed weekly account is selected automatically and receives one ephemeral activation message. Successful windows are recorded locally so they are activated only once; failed attempts wait one hour before retrying. Detection continues every two minutes when Automatic refresh is Off, and the option can be disabled explicitly.
+- **Quota activation (Windows):** Enabled by default. A refreshed weekly account is selected automatically and receives one ephemeral activation message; the option can be disabled explicitly.
 - **Accounts:** Add an account through Terminal, rename an alias, remove a selected account with confirmation, or refresh usage manually.
 
 Click a non-current account row in the menu to switch immediately. Clicking the current account never invokes a switch. Switching terminates and relaunches Codex, so stop any active response first.
@@ -87,6 +90,8 @@ cd codex-duo
 ```
 
 The installer builds, ad-hoc signs, copies the app to `/Applications/Codex Duo.app`, and launches it. Set `CODEX_DUO_INSTALL_DIR` to use a different destination directory.
+
+On its first macOS build, the installer downloads the pinned native `codex-auth` package from npm, verifies its published SHA-512 integrity value, and caches it in `~/Library/Caches/CodexDuo`. This happens while creating the app bundle, never on an end user's first launch.
 
 On Windows with the .NET 8 SDK and Inno Setup 6:
 
@@ -127,7 +132,7 @@ By default the macOS app is ad-hoc signed. Release operators can set `CODEX_DUO_
 
 Codex Duo reads only `~/.codex/accounts/registry.json`. It never opens the managed `*.auth.json` account snapshots. Account labels and cached usage are decoded locally.
 
-At the configured interval, the app runs `codex-auth list`. Selecting a non-active account row:
+At the configured interval, the app runs `codex-auth list` through the platform's configured helper. Selecting a non-active account row:
 
 1. asks the official Codex App to quit and waits up to ten seconds;
 2. runs `codex-auth switch <alias-or-email>`;
@@ -136,19 +141,17 @@ At the configured interval, the app runs `codex-auth list`. Selecting a non-acti
 
 If Codex does not close promptly, Codex Duo terminates the desktop app before switching.
 
-The interface recognizes 300-minute and 10,080-minute windows. Missing windows are omitted instead of being inferred, so a removed 5-hour limit is not duplicated from the weekly limit.
+The interface renders every rate-limit window reported by `codex-auth`. It labels 300-minute and 10,080-minute windows as 5H and WEEK, and the Free 43,200-minute window as MONTH. Missing windows are omitted instead of being inferred.
 
-On macOS, Codex Duo also reads recent local `token_count.rate_limits` events written by Codex. A newer local value takes precedence over a timed-out `codex-auth` cache when its weekly reset window uniquely matches the account. Verified samples are stored by account, survive app restarts, and cover the current weekly window, so inactive accounts do not fall back to older registry snapshots. Ambiguous samples are ignored rather than risking a cross-account value.
+On macOS, Codex Duo also reads recent local `token_count.rate_limits` events written by Codex. A newer local value takes precedence over a timed-out `codex-auth` cache when a reported reset window uniquely matches the account. Verified samples are stored by account, survive app restarts, and cover the active matching window, so inactive accounts do not fall back to older registry snapshots. Ambiguous samples are ignored rather than risking a cross-account value.
 
 A successful process exit containing `TimedOut` is treated as a refresh failure instead of fresh data. The warning remains visible across registry polling until a real refresh succeeds.
 
-Codex Duo passes enabled per-user system proxy settings to `codex-auth` when the app process does not already have proxy environment variables. It reads the dynamic HTTP, HTTPS, SOCKS, and exceptions configuration. Existing `HTTP_PROXY`, `HTTPS_PROXY`, `ALL_PROXY`, and `NO_PROXY` values always take precedence.
-
-On macOS, a 100% weekly quota with no locally recorded activation is treated as waiting for its first message and displayed as `7d`. If quota activation is enabled, the refresh pass handles one waiting weekly account, sends a read-only ephemeral `codex exec` message, refreshes its usage, and relaunches Codex. The successful message time becomes the local seven-day countdown anchor.
+On macOS, Codex Duo routes `codex-auth` through an existing proxy environment first, then an optional custom proxy in Settings, then enabled macOS system proxy settings. Windows preserves existing proxy variables and otherwise imports enabled per-user Windows proxy settings.
 
 ## Privacy and risk
 
-Codex Duo itself does not make network requests. Usage refresh and account switching are delegated to `codex-auth`.
+Codex Duo itself does not make network requests. Usage refresh and account switching are delegated to the platform's `codex-auth` helper.
 
 By default, `codex-auth list` may send the account access token to OpenAI endpoints to refresh usage data. Upstream warns that this relies on non-public behavior, may break without notice, and may carry account risk. Review the [`codex-auth` disclaimer](https://github.com/Loongphy/codex-auth#disclaimer) before using this app.
 
@@ -163,7 +166,7 @@ By default, `codex-auth list` may send the account access token to OpenAI endpoi
 ## Troubleshooting
 
 - **Menu shows —:** Open Settings and verify that `codex-auth` is installed and at least one account is configured.
-- **Add Account does not open:** Terminal automation may require permission in System Settings → Privacy & Security → Automation.
+- **Add does not open:** Make sure Terminal is installed in `/System/Applications/Utilities`, then reopen Settings and try again.
 - **Usage is stale:** Check the age badge, ensure refresh is not Off, then choose Refresh Now. If the API times out, Codex Duo keeps the newest verified value; use an inactive account once to let Codex emit a newer local sample on macOS.
 - **Switch interrupted work:** Reopen Codex and continue the task. Avoid switching during a streaming response.
 - **Login item fails:** Move Codex Duo to `/Applications`, launch it there, and retry the Startup checkbox.

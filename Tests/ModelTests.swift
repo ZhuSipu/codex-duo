@@ -7,6 +7,8 @@ enum ModelTests {
         {
           "schema_version": 4,
           "active_account_key": "account-a",
+          "previous_active_account_key": "account-b",
+          "active_account_activated_at_ms": 2000000,
           "accounts": [
             {
               "account_key": "account-a",
@@ -45,19 +47,59 @@ enum ModelTests {
         precondition(registry.accounts[0].codexAuthSelector == "first")
         precondition(registry.accounts[1].codexAuthSelector == "second@example.com")
         precondition(registry.activeAccount?.accountKey == "account-a")
+        precondition(registry.previousActiveAccountKey == "account-b")
+        precondition(registry.activeAccountActivatedAtMS == 2_000_000)
         precondition(registry.switchTarget(accountKey: "account-a") == nil)
         precondition(registry.switchTarget(accountKey: "account-b")?.email == "second@example.com")
+        precondition(StatusItemPresentation.title(for: registry) == "F 40% · S 90%")
+
+        let threeAccountFixture = #"{"schema_version":4,"active_account_key":"account-c","accounts":[{"account_key":"account-a","email":"first@example.com","alias":"first","plan":"plus","last_usage":{"primary":{"used_percent":60,"window_minutes":10080,"resets_at":4102444800},"secondary":null}},{"account_key":"account-b","email":"second@example.com","alias":null,"plan":"plus","last_usage":{"primary":{"used_percent":10,"window_minutes":10080,"resets_at":4102444800},"secondary":null}},{"account_key":"account-c","email":"2010255779@qq.com","alias":null,"plan":"free","last_usage":null}]}"#
+        let threeAccountRegistry = try JSONDecoder().decode(CodexRegistry.self, from: Data(threeAccountFixture.utf8))
+        precondition(StatusItemPresentation.title(for: threeAccountRegistry) == "F 40% · S 90%")
+        let freeFixture = #"{"schema_version":4,"active_account_key":"account-c","accounts":[{"account_key":"account-a","email":"first@example.com","alias":"first","plan":"plus","last_usage":{"primary":{"used_percent":60,"window_minutes":10080,"resets_at":4102444800},"secondary":null}},{"account_key":"account-c","email":"2010255779@qq.com","alias":null,"plan":"free","last_usage_at":100,"last_usage":{"primary":{"used_percent":7,"window_minutes":43200,"resets_at":4102444800},"secondary":null}}]}"#
+        let freeRegistry = try JSONDecoder().decode(CodexRegistry.self, from: Data(freeFixture.utf8))
+        guard let freeAccount = freeRegistry.activeAccount else { fatalError("Missing active Free account") }
+        precondition(freeAccount.lastUsage?.displayWindows.map(\.displayLabel) == ["MONTH"])
+        precondition(freeAccount.lastUsage?.preferredStatusWindow?.remainingPercent() == 93)
+        precondition(StatusItemPresentation.title(for: freeRegistry) == "2 93% · F 40%")
+        let freeLocalSample = LocalUsageSample(
+            observedAt: Date(timeIntervalSince1970: 101),
+            snapshot: UsageSnapshot(
+                primary: RateLimitWindow(usedPercent: 8, windowMinutes: 43_200, resetsAt: 4_102_444_800),
+                secondary: nil))
+        precondition(freeAccount.acceptsLocalUsage(freeLocalSample))
+        precondition(freeRegistry.uniqueAccountKey(matching: freeLocalSample) == "account-c")
+        precondition(StatusItemPresentation.title(for: CodexRegistry.preview(accountCount: 1)) == "A 83%")
+        precondition(StatusItemPresentation.title(for: CodexRegistry.preview(accountCount: 2)) == "A 70% · A 83%")
+        precondition(StatusItemPresentation.title(for: CodexRegistry.preview(accountCount: 3)) == "A 70% · A 83%")
+        precondition(StatusItemPresentation.title(for: CodexRegistry.preview(accountCount: 10)) == "A 70% · A 83%")
+
+        let activation = Int64(2_000_000)
+        precondition(CodexAuthService.runtimeIsSynchronized(
+            appIsRunning: false, launchDate: nil, activationTimeMilliseconds: activation))
+        precondition(CodexAuthService.runtimeIsSynchronized(
+            appIsRunning: true,
+            launchDate: Date(timeIntervalSince1970: 2_001),
+            activationTimeMilliseconds: activation))
+        precondition(!CodexAuthService.runtimeIsSynchronized(
+            appIsRunning: true,
+            launchDate: Date(timeIntervalSince1970: 1_998),
+            activationTimeMilliseconds: activation))
+        precondition(!CodexAuthService.runtimeIsSynchronized(
+            appIsRunning: true, launchDate: nil, activationTimeMilliseconds: activation))
 
         let localLine = #"{"timestamp":"2026-08-25T11:34:31.137Z","type":"event_msg","payload":{"type":"token_count","rate_limits":{"limit_id":"codex","primary":{"used_percent":6.0,"window_minutes":10080,"resets_at":1788260768},"secondary":null}}}"#
         let localSample = LocalCodexUsageReader.parseLine(localLine)
-        precondition(localSample?.snapshot.weekly?.remainingPercent() == 94)
+        precondition(localSample?.snapshot.weekly?.remainingPercent(now: localSample!.observedAt) == 94)
         let mergedRegistry = registry.replacingActiveUsage(with: localSample!.snapshot, observedAt: localSample!.observedAt)
-        precondition(mergedRegistry.activeAccount?.lastUsage?.weekly?.remainingPercent() == 94)
+        precondition(mergedRegistry.previousActiveAccountKey == "account-b")
+        precondition(mergedRegistry.activeAccountActivatedAtMS == 2_000_000)
+        precondition(mergedRegistry.activeAccount?.lastUsage?.weekly?.remainingPercent(now: localSample!.observedAt) == 94)
         let inactiveRegistry = registry.replacingUsage(
             for: "account-b",
             with: localSample!.snapshot,
             observedAt: localSample!.observedAt)
-        precondition(inactiveRegistry.accounts[1].lastUsage?.weekly?.remainingPercent() == 94)
+        precondition(inactiveRegistry.accounts[1].lastUsage?.weekly?.remainingPercent(now: localSample!.observedAt) == 94)
         precondition(inactiveRegistry.accounts[0].lastUsage?.weekly?.remainingPercent() == 40)
         precondition(mergedRegistry.accounts[1].lastUsage?.weekly?.remainingPercent() == 90)
         precondition(LocalCodexUsageReader.parseLine(#"{"type":"event_msg","payload":{"type":"token_count","rate_limits":{"limit_id":"other"}}}"#) == nil)
@@ -152,13 +194,13 @@ enum ModelTests {
         precondition(preferences.appearanceMode == .system)
         precondition(preferences.language == .system)
         precondition(preferences.refreshInterval == .twoMinutes)
-        precondition(preferences.autoActivateRefreshedAccounts)
         preferences.appearanceMode = .dark
         preferences.language = .simplifiedChinese
         preferences.refreshInterval = .off
-        preferences.autoActivateRefreshedAccounts = false
+        preferences.customProxyURL = "socks5h://127.0.0.1:7897"
         precondition(preferences.appearanceMode == .dark)
         precondition(preferences.language == .simplifiedChinese)
+        precondition(preferences.customProxyURL == "socks5h://127.0.0.1:7897")
         precondition(SettingsText.value("accounts", language: .simplifiedChinese) == "账户")
         precondition(SettingsText.value("refreshNow", language: .japanese) == "更新")
         precondition(SettingsText.value("appearance", language: .french) == "Apparence")
@@ -167,15 +209,6 @@ enum ModelTests {
             precondition(!language.displayName.isEmpty)
         }
         precondition(preferences.refreshInterval == .off)
-        precondition(!preferences.autoActivateRefreshedAccounts)
-        preferences.autoActivateRefreshedAccounts = true
-        let activationNow = Date(timeIntervalSince1970: 200_000)
-        precondition(preferences.shouldAttemptAutoActivation(accountKey: "account-a", boundary: 190_000, now: activationNow))
-        preferences.recordAutoActivationAttempt(accountKey: "account-a", at: activationNow)
-        precondition(!preferences.shouldAttemptAutoActivation(accountKey: "account-a", boundary: 190_000, now: activationNow))
-        preferences.recordAutoActivationSuccess(accountKey: "account-a", at: activationNow)
-        precondition(!preferences.shouldAttemptAutoActivation(accountKey: "account-a", boundary: 190_000, now: activationNow.addingTimeInterval(4_000)))
-        precondition(preferences.autoActivationStart(accountKey: "account-a") == activationNow)
 
         let selector = "unique@example.com"
         precondition(CodexAuthCommands.switchAccount(selector: selector) == ["switch", selector])
@@ -183,14 +216,6 @@ enum ModelTests {
         precondition(CodexAuthCommands.setAlias(selector: selector, alias: "work") == ["alias", "set", selector, "work"])
         precondition(CodexAuthCommands.setAlias(selector: selector, alias: "  ") == ["alias", "clear", selector])
         precondition(!CodexAuthCommands.removeAccount(selector: selector).contains("--skip-api"))
-        let activationCommand = CodexAuthCommands.activateQuota()
-        precondition(activationCommand.first == "exec")
-        precondition(activationCommand.contains("--ephemeral"))
-        precondition(activationCommand.contains("--ignore-user-config"))
-        precondition(activationCommand.contains("read-only"))
-        precondition(activationCommand.contains("gpt-5.4-mini"))
-        precondition(activationCommand.contains("model_reasoning_effort=\"low\""))
-        precondition(activationCommand.last == CodexAuthCommands.activationPrompt)
         let timedOutRefresh = CodexAuthService.normalizedUsageRefreshResult(
             CommandResult(status: 0, stdout: "01 account Plus TimedOut TimedOut", stderr: ""))
         precondition(!timedOutRefresh.succeeded)
@@ -198,6 +223,44 @@ enum ModelTests {
         let freshRefresh = CodexAuthService.normalizedUsageRefreshResult(
             CommandResult(status: 0, stdout: "01 account Plus 80% 70%", stderr: ""))
         precondition(freshRefresh.succeeded)
+        let loginScript = CodexAuthService.loginScript(
+            executablePath: "/tmp/user's/bin/codex-auth",
+            scriptPath: "/tmp/codex-duo-login.command",
+            outcomePath: "/tmp/codex-duo-login.result")
+        precondition(loginScript.contains("'/tmp/user'\\''s/bin/codex-auth' login"))
+        precondition(loginScript.contains("trap 'rm -f -- \"$login_script\"' EXIT"))
+        precondition(loginScript.contains("printf '%d' $login_status > \"$outcome_file\""))
+        precondition(loginScript.contains("Return to Codex Duo"))
+        precondition(!loginScript.contains("osascript"))
+        let loginTestDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("codex-duo-login-test-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: loginTestDirectory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: loginTestDirectory) }
+        let failingExecutable = loginTestDirectory.appendingPathComponent("codex-auth")
+        let commandFile = loginTestDirectory.appendingPathComponent("login.command")
+        let outcomeFile = loginTestDirectory.appendingPathComponent("login.result")
+        try Data("#!/bin/zsh\nexit 7\n".utf8).write(to: failingExecutable)
+        try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: failingExecutable.path)
+        let failingLoginScript = CodexAuthService.loginScript(
+            executablePath: failingExecutable.path,
+            scriptPath: commandFile.path,
+            outcomePath: outcomeFile.path)
+        try Data(failingLoginScript.utf8).write(to: commandFile)
+        let loginProcess = Process()
+        loginProcess.executableURL = URL(fileURLWithPath: "/bin/zsh")
+        loginProcess.arguments = [commandFile.path]
+        let loginInput = Pipe()
+        loginProcess.standardInput = loginInput
+        loginProcess.standardOutput = FileHandle.nullDevice
+        loginProcess.standardError = FileHandle.nullDevice
+        try loginProcess.run()
+        loginInput.fileHandleForWriting.write(Data("\n".utf8))
+        try loginInput.fileHandleForWriting.close()
+        loginProcess.waitUntilExit()
+        precondition(loginProcess.terminationStatus == 7)
+        precondition(!FileManager.default.fileExists(atPath: commandFile.path))
+        let loginOutcome = try String(contentsOf: outcomeFile, encoding: .utf8)
+        precondition(loginOutcome == "7")
         let proxySettings: [String: Any] = [
             "HTTPEnable": 1, "HTTPProxy": "proxy.internal.example", "HTTPPort": 8080,
             "HTTPSEnable": 1, "HTTPSProxy": "secure-proxy.example", "HTTPSPort": 8443,
@@ -214,6 +277,32 @@ enum ModelTests {
             to: ["https_proxy": "http://custom:9000"])
         precondition(preservedProxy["https_proxy"] == "http://custom:9000")
         precondition(preservedProxy["HTTPS_PROXY"] == nil)
+        precondition(CodexAuthService.normalizedProxyURL("") == "")
+        precondition(CodexAuthService.normalizedProxyURL(" https://127.0.0.1:7897 ") == "https://127.0.0.1:7897")
+        precondition(CodexAuthService.normalizedProxyURL("ftp://127.0.0.1:7897") == nil)
+        precondition(CodexAuthService.normalizedProxyURL("http://user:pass@127.0.0.1:7897") == nil)
+        let customProxyEnvironment = CodexAuthService.applyingProxyConfiguration(
+            customProxyURL: "socks5h://127.0.0.1:7897",
+            systemSettings: proxySettings,
+            to: ["PATH": "/usr/bin"])
+        precondition(customProxyEnvironment["ALL_PROXY"] == "socks5h://127.0.0.1:7897")
+        precondition(customProxyEnvironment["HTTPS_PROXY"] == nil)
+        let httpCustomProxyEnvironment = CodexAuthService.applyingProxyConfiguration(
+            customProxyURL: "http://127.0.0.1:7897",
+            systemSettings: proxySettings,
+            to: ["PATH": "/usr/bin"])
+        precondition(httpCustomProxyEnvironment["HTTP_PROXY"] == "http://127.0.0.1:7897")
+        precondition(httpCustomProxyEnvironment["HTTPS_PROXY"] == "http://127.0.0.1:7897")
+        let automaticProxyEnvironment = CodexAuthService.applyingProxyConfiguration(
+            customProxyURL: "",
+            systemSettings: proxySettings,
+            to: ["PATH": "/usr/bin"])
+        precondition(automaticProxyEnvironment["HTTPS_PROXY"] == "http://secure-proxy.example:8443")
+        let environmentProxy = CodexAuthService.applyingProxyConfiguration(
+            customProxyURL: "http://127.0.0.1:7897",
+            systemSettings: proxySettings,
+            to: ["HTTPS_PROXY": "http://environment:9000"])
+        precondition(environmentProxy == ["HTTPS_PROXY": "http://environment:9000"])
 
         let testNow = Date(timeIntervalSince1970: 100_000)
         let countdown = RateLimitWindow(
@@ -228,24 +317,6 @@ enum ModelTests {
             windowMinutes: 10_080,
             resetsAt: weeklyReset)
         precondition(weeklyCountdown.resetText(now: testNow) == "6d 14h")
-
-        let expiredFixture = #"{"schema_version":4,"active_account_key":"account-a","accounts":[{"account_key":"account-a","email":"first@example.com","alias":null,"plan":"plus","last_usage_at":null,"last_usage":{"primary":{"used_percent":0,"window_minutes":10080,"resets_at":99000},"secondary":null}}]}"#
-        let expiredRegistry = try JSONDecoder().decode(CodexRegistry.self, from: Data(expiredFixture.utf8))
-        precondition(expiredRegistry.accounts[0].weeklyRefreshBoundary(comparedTo: nil, now: testNow) == 99_000)
-
-        let advancedFixture = #"{"schema_version":4,"active_account_key":"account-a","accounts":[{"account_key":"account-a","email":"first@example.com","alias":null,"plan":"plus","last_usage_at":null,"last_usage":{"primary":{"used_percent":0,"window_minutes":10080,"resets_at":704800},"secondary":null}}]}"#
-        let advancedRegistry = try JSONDecoder().decode(CodexRegistry.self, from: Data(advancedFixture.utf8))
-        precondition(advancedRegistry.accounts[0].weeklyRefreshBoundary(comparedTo: expiredRegistry.accounts[0], now: testNow) == 100_000)
-
-        let dormantFixture = #"{"schema_version":4,"active_account_key":"account-a","accounts":[{"account_key":"account-a","email":"first@example.com","alias":null,"plan":"plus","last_usage_at":null,"last_usage":{"primary":{"used_percent":0,"window_minutes":10080,"resets_at":670660},"secondary":null}}]}"#
-        let dormantRegistry = try JSONDecoder().decode(CodexRegistry.self, from: Data(dormantFixture.utf8))
-        precondition(dormantRegistry.accounts[0].weeklyRefreshBoundary(comparedTo: nil, now: testNow) == 65_860)
-        let dormantWindow = dormantRegistry.accounts[0].lastUsage!.weekly!
-        precondition(dormantWindow.resetText(now: testNow) == "6d 14h")
-        precondition(dormantWindow.displayResetText(activationStart: nil, now: testNow) == "7d")
-        precondition(dormantWindow.displayResetText(
-            activationStart: testNow.addingTimeInterval(-46_800),
-            now: testNow) == "6d 11h")
 
         let hourlyReset: TimeInterval = 111_520
         let hourlyCountdown = RateLimitWindow(

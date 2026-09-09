@@ -5,12 +5,30 @@ struct CodexRegistry: Decodable {
 
     let schemaVersion: Int
     let activeAccountKey: String?
+    let previousActiveAccountKey: String?
+    let activeAccountActivatedAtMS: Int64?
     let accounts: [CodexAccount]
 
     enum CodingKeys: String, CodingKey {
         case schemaVersion = "schema_version"
         case activeAccountKey = "active_account_key"
+        case previousActiveAccountKey = "previous_active_account_key"
+        case activeAccountActivatedAtMS = "active_account_activated_at_ms"
         case accounts
+    }
+
+    init(
+        schemaVersion: Int,
+        activeAccountKey: String?,
+        previousActiveAccountKey: String? = nil,
+        activeAccountActivatedAtMS: Int64? = nil,
+        accounts: [CodexAccount])
+    {
+        self.schemaVersion = schemaVersion
+        self.activeAccountKey = activeAccountKey
+        self.previousActiveAccountKey = previousActiveAccountKey
+        self.activeAccountActivatedAtMS = activeAccountActivatedAtMS
+        self.accounts = accounts
     }
 
     var menuAccounts: [CodexAccount] {
@@ -28,6 +46,15 @@ struct CodexRegistry: Decodable {
     var activeAccount: CodexAccount? {
         guard let activeAccountKey else { return nil }
         return self.accounts.first { $0.accountKey == activeAccountKey }
+    }
+
+    func replacingActiveAccountKeyForPresentation(_ accountKey: String?) -> CodexRegistry {
+        CodexRegistry(
+            schemaVersion: self.schemaVersion,
+            activeAccountKey: accountKey,
+            previousActiveAccountKey: self.previousActiveAccountKey,
+            activeAccountActivatedAtMS: self.activeAccountActivatedAtMS,
+            accounts: self.accounts)
     }
 
     func switchTarget(accountKey: String) -> CodexAccount? {
@@ -54,7 +81,12 @@ struct CodexRegistry: Decodable {
                 lastUsage: snapshot,
                 lastUsageAt: Int64(observedAt.timeIntervalSince1970))
         }
-        return CodexRegistry(schemaVersion: self.schemaVersion, activeAccountKey: activeAccountKey, accounts: updated)
+        return CodexRegistry(
+            schemaVersion: self.schemaVersion,
+            activeAccountKey: activeAccountKey,
+            previousActiveAccountKey: self.previousActiveAccountKey,
+            activeAccountActivatedAtMS: self.activeAccountActivatedAtMS,
+            accounts: updated)
     }
 
     func mergingLocalUsage(_ samplesByAccount: [String: LocalUsageSample]) -> CodexRegistry {
@@ -70,9 +102,11 @@ struct CodexRegistry: Decodable {
     }
 
     func uniqueAccountKey(matching sample: LocalUsageSample) -> String? {
-        guard let localReset = sample.snapshot.weekly?.resetsAt else { return nil }
         let candidates = self.accounts.compactMap { account -> (String, TimeInterval)? in
-            guard let cachedReset = account.lastUsage?.weekly?.resetsAt else { return nil }
+            guard let matchingWindows = account.lastUsage?.matchingWindows(with: sample.snapshot),
+                  let cachedReset = matchingWindows.cached.resetsAt,
+                  let localReset = matchingWindows.local.resetsAt
+            else { return nil }
             let distance = abs(cachedReset - localReset)
             return distance <= 86_400 ? (account.accountKey, distance) : nil
         }.sorted { $0.1 < $1.1 }
@@ -138,8 +172,9 @@ struct CodexAccount: Decodable {
 
     func acceptsLocalUsage(_ sample: LocalUsageSample) -> Bool {
         guard sample.observedAt.timeIntervalSince1970 > TimeInterval(self.lastUsageAt ?? 0),
-              let cachedReset = self.lastUsage?.weekly?.resetsAt,
-              let localReset = sample.snapshot.weekly?.resetsAt
+              let matchingWindows = self.lastUsage?.matchingWindows(with: sample.snapshot),
+              let cachedReset = matchingWindows.cached.resetsAt,
+              let localReset = matchingWindows.local.resetsAt
         else { return false }
         return abs(cachedReset - localReset) <= 86_400
     }
@@ -153,25 +188,6 @@ struct CodexAccount: Decodable {
         return "\(seconds / 86_400)D OLD"
     }
 
-    func weeklyRefreshBoundary(comparedTo previous: CodexAccount?, now: Date = Date()) -> TimeInterval? {
-        guard let current = self.lastUsage?.weekly,
-              let currentReset = current.resetsAt
-        else { return nil }
-
-        let nowSeconds = now.timeIntervalSince1970
-        if currentReset <= nowSeconds { return currentReset }
-        if current.remainingPercent(now: now) == 100 {
-            let duration = TimeInterval((current.windowMinutes ?? 10_080) * 60)
-            return currentReset - duration
-        }
-
-        guard let previousWindow = previous?.lastUsage?.weekly,
-              let previousReset = previousWindow.resetsAt,
-              previousReset <= nowSeconds,
-              currentReset > previousReset
-        else { return nil }
-        return previousReset
-    }
 }
 
 struct UsageSnapshot: Codable {
@@ -186,6 +202,33 @@ struct UsageSnapshot: Codable {
 
     var fiveHour: RateLimitWindow? { self.window(minutes: 300) }
     var weekly: RateLimitWindow? { self.window(minutes: 10_080) }
+
+    var reportedWindows: [RateLimitWindow] {
+        [self.primary, self.secondary].compactMap { $0 }
+    }
+
+    var displayWindows: [RateLimitWindow] {
+        let familiarWindows = [self.fiveHour, self.weekly].compactMap { $0 }
+        let familiarMinutes = Set(familiarWindows.compactMap(\.windowMinutes))
+        return familiarWindows + self.reportedWindows.filter { window in
+            guard let minutes = window.windowMinutes else { return true }
+            return !familiarMinutes.contains(minutes)
+        }
+    }
+
+    var preferredStatusWindow: RateLimitWindow? {
+        self.weekly ?? self.fiveHour ?? self.primary ?? self.secondary
+    }
+
+    func matchingWindows(with localSnapshot: UsageSnapshot) -> (cached: RateLimitWindow, local: RateLimitWindow)? {
+        for cachedWindow in [self.weekly, self.primary, self.secondary].compactMap({ $0 }) {
+            guard let minutes = cachedWindow.windowMinutes,
+                  let localWindow = localSnapshot.window(minutes: minutes)
+            else { continue }
+            return (cachedWindow, localWindow)
+        }
+        return nil
+    }
 }
 
 struct RateLimitWindow: Codable {
@@ -225,20 +268,25 @@ struct RateLimitWindow: Codable {
         return "\(minutes)min"
     }
 
-    func displayResetText(activationStart: Date?, now: Date = Date()) -> String? {
-        guard self.windowMinutes == 10_080, self.remainingPercent(now: now) == 100 else {
-            return self.resetText(now: now)
+    var displayLabel: String {
+        switch self.windowMinutes {
+        case 300:
+            return "5H"
+        case 1_440:
+            return "DAY"
+        case 10_080:
+            return "WEEK"
+        case 43_200:
+            return "MONTH"
+        case let minutes? where minutes > 0 && minutes.isMultiple(of: 1_440):
+            return "\(minutes / 1_440)D"
+        case let minutes? where minutes > 0 && minutes.isMultiple(of: 60):
+            return "\(minutes / 60)H"
+        case let minutes? where minutes > 0:
+            return "\(minutes)M"
+        default:
+            return "USAGE"
         }
-        if let activationStart {
-            let anchoredReset = activationStart.addingTimeInterval(604_800).timeIntervalSince1970
-            if anchoredReset > now.timeIntervalSince1970 {
-                let anchoredWindow = RateLimitWindow(
-                    usedPercent: self.usedPercent,
-                    windowMinutes: self.windowMinutes,
-                    resetsAt: anchoredReset)
-                return anchoredWindow.resetText(now: now)
-            }
-        }
-        return "7d"
     }
+
 }

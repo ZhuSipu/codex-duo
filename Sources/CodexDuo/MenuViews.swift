@@ -3,18 +3,6 @@ import QuartzCore
 
 private let panelWidth: CGFloat = 336
 
-func codexDuoRoundedFont(ofSize size: CGFloat, weight: NSFont.Weight) -> NSFont {
-    let base = NSFont.systemFont(ofSize: size, weight: weight)
-    guard let descriptor = base.fontDescriptor.withDesign(.rounded),
-          let rounded = NSFont(descriptor: descriptor, size: size)
-    else { return base }
-    return rounded
-}
-
-private extension NSAppearance {
-    var codexDuoIsDark: Bool { self.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua }
-}
-
 final class AccountOverviewView: NSView {
     private let rows = NSStackView()
     private let resetTextProvider: (CodexAccount, RateLimitWindow) -> String?
@@ -101,10 +89,9 @@ final class AccountOverviewView: NSView {
         errorMessage: String?) -> String
     {
         let accounts = registry?.menuAccounts.map { account in
-            let windows = [account.lastUsage?.fiveHour, account.lastUsage?.weekly].map { window in
-                guard let window else { return "-" }
+            let windows = account.lastUsage?.displayWindows.map { window in
                 return "\(window.usedPercent)|\(window.windowMinutes ?? -1)|\(window.resetsAt ?? -1)|\(self.resetTextProvider(account, window) ?? "")"
-            }.joined(separator: ",")
+            }.joined(separator: ",") ?? ""
             return "\(account.accountKey)|\(account.displayName)|\(account.plan ?? "")|\(account.usageAgeText() ?? "")|\(windows)"
         }.joined(separator: ";") ?? ""
         return "\(registry?.activeAccountKey ?? "")|\(isWorking)|\(errorMessage ?? "")|\(accounts)"
@@ -126,7 +113,7 @@ private final class HairlineView: NSView {
         let dark = (self.window?.effectiveAppearance ?? self.effectiveAppearance).codexDuoIsDark
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        self.layer?.backgroundColor = NSColor.labelColor.withAlphaComponent(dark ? 0.08 : 0.06).cgColor
+        self.layer?.backgroundColor = CodexDuoStyle.hairlineColor(dark: dark).cgColor
         CATransaction.commit()
     }
     @available(*, unavailable) required init?(coder: NSCoder) { nil }
@@ -155,10 +142,10 @@ final class AccountRowButton: NSButton {
         self.title = ""
         self.focusRingType = .none
         self.wantsLayer = true
-        self.layer?.cornerRadius = 9
+        self.layer?.cornerRadius = CodexDuoStyle.rowCornerRadius
         self.layer?.cornerCurve = .continuous
         self.layer?.masksToBounds = true
-        self.hoverLayer.cornerRadius = 9
+        self.hoverLayer.cornerRadius = CodexDuoStyle.rowCornerRadius
         self.hoverLayer.opacity = 0
         self.layer?.insertSublayer(self.hoverLayer, at: 0)
         self.refractionLayer.type = .radial
@@ -177,7 +164,7 @@ final class AccountRowButton: NSButton {
         addSubview(marker)
 
         let identity = NSTextField(labelWithString: account.displayName)
-        identity.font = NSFont.systemFont(ofSize: 11.8, weight: active ? .semibold : .medium)
+        identity.font = CodexDuoStyle.accountNameFont(active: active)
         identity.textColor = active ? .labelColor : .secondaryLabelColor
         identity.lineBreakMode = .byTruncatingMiddle
         identity.maximumNumberOfLines = 1
@@ -205,13 +192,12 @@ final class AccountRowButton: NSButton {
         identityRow.spacing = 7
         identityRow.distribution = .fill
 
-        var availableMeters: [NSView] = []
-        if let fiveHour = account.lastUsage?.fiveHour {
-            availableMeters.append(UsageMeterView(label: "5H", window: fiveHour, resetText: resetTextProvider(account, fiveHour)))
-        }
-        if let weekly = account.lastUsage?.weekly {
-            availableMeters.append(UsageMeterView(label: "WEEK", window: weekly, resetText: resetTextProvider(account, weekly)))
-        }
+        var availableMeters: [NSView] = account.lastUsage?.displayWindows.map { window in
+            UsageMeterView(
+                label: window.displayLabel,
+                window: window,
+                resetText: resetTextProvider(account, window)) as NSView
+        } ?? []
         if availableMeters.isEmpty { availableMeters.append(UsageMeterView(label: "USAGE", window: nil, resetText: nil)) }
         let meters = NSStackView(views: availableMeters)
         meters.orientation = .horizontal
@@ -306,9 +292,9 @@ final class AccountRowButton: NSButton {
 
     private func updateHoverColor() {
         let dark = self.effectiveAppearance.codexDuoIsDark
-        self.hoverLayer.backgroundColor = NSColor.labelColor.withAlphaComponent(dark ? 0.055 : 0.075).cgColor
-        self.hoverLayer.borderWidth = 0.5
-        self.hoverLayer.borderColor = NSColor.labelColor.withAlphaComponent(dark ? 0.07 : 0.13).cgColor
+        self.hoverLayer.backgroundColor = CodexDuoStyle.rowHoverColor(dark: dark).cgColor
+        self.hoverLayer.borderWidth = CodexDuoStyle.hairlineWidth
+        self.hoverLayer.borderColor = CodexDuoStyle.rowHoverBorderColor(dark: dark).cgColor
         self.refractionLayer.colors = [
             NSColor.white.withAlphaComponent(dark ? 0.11 : 0.32).cgColor,
             NSColor.white.withAlphaComponent(0).cgColor,
@@ -359,14 +345,14 @@ private final class ActiveMarkerView: NSView {
         self.active = active
         super.init(frame: .zero)
         self.wantsLayer = true
-        self.layer?.cornerRadius = 3.5
+        self.layer?.cornerRadius = CodexDuoStyle.markerCornerRadius
         self.updateColor()
     }
     override func viewDidChangeEffectiveAppearance() { super.viewDidChangeEffectiveAppearance(); self.updateColor() }
     private func updateColor() {
         guard self.active else { self.layer?.backgroundColor = NSColor.clear.cgColor; return }
         let dark = self.effectiveAppearance.codexDuoIsDark
-        self.layer?.backgroundColor = NSColor.labelColor.withAlphaComponent(dark ? 0.82 : 0.72).cgColor
+        self.layer?.backgroundColor = CodexDuoStyle.activeMarkerColor(dark: dark).cgColor
         self.layer?.shadowColor = NSColor.labelColor.cgColor
         self.layer?.shadowOpacity = dark ? 0.18 : 0.08
         self.layer?.shadowRadius = 2
@@ -379,11 +365,11 @@ private final class PlanBadgeView: NSView {
     init(text: String) {
         super.init(frame: .zero)
         self.wantsLayer = true
-        self.layer?.cornerRadius = 5
+        self.layer?.cornerRadius = CodexDuoStyle.badgeCornerRadius
         self.layer?.cornerCurve = .continuous
-        self.layer?.borderWidth = 0.5
+        self.layer?.borderWidth = CodexDuoStyle.hairlineWidth
         let label = NSTextField(labelWithString: text)
-        label.font = NSFont.systemFont(ofSize: 8.5, weight: .medium)
+        label.font = CodexDuoStyle.badgeFont
         label.textColor = .tertiaryLabelColor
         label.translatesAutoresizingMaskIntoConstraints = false
         addSubview(label)
@@ -399,8 +385,8 @@ private final class PlanBadgeView: NSView {
         let dark = (self.window?.effectiveAppearance ?? self.effectiveAppearance).codexDuoIsDark
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        self.layer?.backgroundColor = NSColor.labelColor.withAlphaComponent(dark ? 0.06 : 0.035).cgColor
-        self.layer?.borderColor = NSColor.white.withAlphaComponent(dark ? 0.11 : 0.24).cgColor
+        self.layer?.backgroundColor = CodexDuoStyle.badgeBackgroundColor(dark: dark).cgColor
+        self.layer?.borderColor = CodexDuoStyle.badgeBorderColor(dark: dark).cgColor
         CATransaction.commit()
     }
     @available(*, unavailable) required init?(coder: NSCoder) { nil }
@@ -530,7 +516,7 @@ final class MenuFooterView: NSView {
     private func button(title: String, symbol: String, target: AnyObject, action: Selector) -> NSButton {
         let button = NSButton(title: title, target: target, action: action)
         button.isBordered = false
-        button.font = NSFont.systemFont(ofSize: 10.5, weight: .medium)
+        button.font = CodexDuoStyle.actionFont
         button.contentTintColor = .secondaryLabelColor
         button.image = NSImage(systemSymbolName: symbol, accessibilityDescription: title)
         button.imagePosition = .imageLeading

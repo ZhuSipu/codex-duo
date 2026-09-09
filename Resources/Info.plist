@@ -16,8 +16,6 @@
     <string>1.0.0</string>
     <key>LSApplicationCategoryType</key>
     <string>public.app-category.developer-tools</string>
-    <key>NSAppleEventsUsageDescription</key>
-    <string>Codex Duo opens Terminal to run the official Codex account login flow.</string>
     <key>CFBundleVersion</key>
 	<string>15</string>
     <key>LSMinimumSystemVersion</key>

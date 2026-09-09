@@ -12,9 +12,7 @@ All notable changes to Codex Duo are documented here.
 
 ## 0.9.0 - 2026-08-26
 
-- Treat an untouched 100% weekly quota as a waiting seven-day window instead of counting down from an unanchored API timestamp.
-- Add default-enabled macOS activation for refreshed weekly accounts with one ephemeral Codex message, duplicate prevention, an hourly failure cooldown, and an explicit opt-out setting.
-- Bound activation commands and UI state with timeouts, discard subprocess output to prevent pipe stalls, and use a low-reasoning fast model for the activation message.
+- Remove unattended weekly-account switching and Codex message submission from background refreshes.
 - Prefer recent local Codex rate-limit events for every uniquely matching macOS account when `codex-auth` times out, persist verified inactive-account samples across restarts, scan the full weekly window, and reject ambiguous or older values.
 - Show age badges for values older than 15 minutes and preserve logical `TimedOut` refresh warnings across background registry polling.
 - Refresh an already-open macOS menu in place when local rate-limit events add or update a 5-hour or weekly window, with polling timers registered for menu-tracking run-loop modes.

@@ -8,18 +8,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var registry: CodexRegistry?
     private var refreshTimer: Timer?
     private var registryTimer: Timer?
-    private var autoActivationWatchdog: Timer?
     private var isRefreshing = false
     private var isSwitching = false
-    private var isAutoActivating = false
     private var isMenuOpen = false
     private var lastError: String?
+    private var runtimeAccountMismatch = false
     private var previewAppearance: NSAppearance?
     private weak var accountOverviewView: AccountOverviewView?
     private lazy var settingsController = SettingsWindowController(
         preferences: self.preferences,
         service: self.service,
-        registryProvider: { [weak self] in self?.registry },
+        registryProvider: { [weak self] in self?.presentationRegistry },
         onAccountsChanged: { [weak self] in self?.reloadRegistry() },
         onRefreshRequested: { [weak self] in self?.refreshUsage(force: true) })
 
@@ -48,7 +47,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         RunLoop.main.add(registryTimer, forMode: .common)
         self.registryTimer = registryTimer
         self.scheduleRefreshTimer()
-        if self.preferences.refreshInterval != .off || self.preferences.autoActivateRefreshedAccounts { self.refreshUsage() }
+        if self.preferences.refreshInterval != .off { self.refreshUsage() }
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(self.preferencesDidChange(_:)),
@@ -81,7 +80,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     func applicationWillTerminate(_ notification: Notification) {
         self.refreshTimer?.invalidate()
         self.registryTimer?.invalidate()
-        self.autoActivationWatchdog?.invalidate()
         NotificationCenter.default.removeObserver(self)
     }
 
@@ -101,17 +99,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private func reloadRegistry(clearError: Bool = true) {
         if let previewAccountCount {
             self.registry = CodexRegistry.preview(accountCount: previewAccountCount)
+            self.runtimeAccountMismatch = false
             self.lastError = nil
             self.updateStatusItem()
             return
         }
         do {
             self.registry = try self.service.loadRegistry()
+            self.runtimeAccountMismatch = self.registry.map {
+                !self.service.isCodexRuntimeSynchronized(with: $0)
+            } ?? false
             if !self.isSwitching && clearError { self.lastError = nil }
             self.updateStatusItem()
             self.refreshOpenMenuIfNeeded()
         } catch {
             self.registry = nil
+            self.runtimeAccountMismatch = false
             self.lastError = error.localizedDescription
             self.updateStatusItem()
             self.refreshOpenMenuIfNeeded()
@@ -121,16 +124,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private func refreshOpenMenuIfNeeded() {
         guard self.isMenuOpen else { return }
         self.accountOverviewView?.update(
-            registry: self.registry,
-            isWorking: self.isSwitching || self.isAutoActivating,
+            registry: self.presentationRegistry,
+            isWorking: self.isSwitching || self.isRefreshing,
             errorMessage: self.lastError)
     }
 
     private func updateStatusItem() {
         guard let button = self.statusItem.button else { return }
-        if self.isSwitching || self.isAutoActivating {
-            button.title = self.isAutoActivating ? "Activating…" : "Switching…"
-            button.toolTip = self.isAutoActivating ? "Activating a refreshed weekly quota window" : "Restarting Codex with the selected account"
+        if self.isSwitching {
+            button.title = "Switching…"
+            button.toolTip = "Restarting Codex with the selected account"
             return
         }
         guard let registry = self.registry, !registry.accounts.isEmpty else {
@@ -139,12 +142,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             return
         }
 
-        let accounts = registry.menuAccounts
-        if accounts.count <= 2 {
-            button.title = accounts.map(self.statusSummary).joined(separator: " · ")
-        } else if let active = registry.activeAccount ?? accounts.first {
-            button.title = "\(self.statusSummary(active)) · +\(accounts.count - 1)"
+        if self.runtimeAccountMismatch {
+            button.title = "⚠︎"
+            button.font = codexDuoRoundedFont(ofSize: NSFont.systemFontSize, weight: .semibold)
+            button.toolTip = "Codex is still using an earlier account. Choose an account to restart Codex."
+            return
         }
+
+        let accounts = registry.menuAccounts
+        button.title = StatusItemPresentation.title(for: registry)
         button.font = codexDuoRoundedFont(ofSize: NSFont.systemFontSize, weight: .semibold)
         button.toolTip = accounts.map { account in
             let active = account.accountKey == registry.activeAccountKey ? "Active — " : ""
@@ -157,12 +163,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         let accountsItem = NSMenuItem()
         let accountOverviewView = AccountOverviewView(
-            registry: self.registry,
-            isWorking: self.isSwitching || self.isAutoActivating,
+            registry: self.presentationRegistry,
+            isWorking: self.isSwitching || self.isRefreshing,
             errorMessage: self.lastError,
-            resetTextProvider: { [weak self] account, window in
-                self?.displayResetText(account: account, window: window)
-            },
+            resetTextProvider: { _, window in window.resetText() },
             target: self,
             action: #selector(self.switchToAccount(_:)))
         self.accountOverviewView = accountOverviewView
@@ -177,40 +181,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(footerItem)
     }
 
-    private func statusSummary(_ account: CodexAccount) -> String {
-        let remaining = account.lastUsage?.weekly?.remainingPercent()
-            ?? account.lastUsage?.fiveHour?.remainingPercent()
-        return "\(account.compactName) \(remaining.map(String.init) ?? "—")%"
-    }
-
     private func quotaSummary(_ account: CodexAccount) -> String {
-        var parts: [String] = []
-        if let fiveHour = account.lastUsage?.fiveHour {
-            parts.append("5H  \(self.quotaText(account: account, window: fiveHour))")
-        }
-        if let weekly = account.lastUsage?.weekly {
-            parts.append("WEEK  \(self.quotaText(account: account, window: weekly))")
-        }
+        let parts = account.lastUsage?.displayWindows.map { window in
+            "\(window.displayLabel)  \(self.quotaText(window))"
+        } ?? []
         return parts.isEmpty ? "Usage unavailable" : parts.joined(separator: "     ")
     }
 
-    private func quotaText(account: CodexAccount, window: RateLimitWindow) -> String {
+    private func quotaText(_ window: RateLimitWindow) -> String {
         let remaining = window.remainingPercent()
-        if let reset = self.displayResetText(account: account, window: window) { return "\(remaining)% · \(reset)" }
+        if let reset = window.resetText() { return "\(remaining)% · \(reset)" }
         return "\(remaining)%"
     }
 
-    private func displayResetText(account: CodexAccount, window: RateLimitWindow, now: Date = Date()) -> String? {
-        window.displayResetText(
-            activationStart: self.preferences.autoActivationStart(accountKey: account.accountKey),
-            now: now)
-    }
-
     @objc private func switchToAccount(_ sender: Any?) {
-        guard !self.isSwitching,
+        guard !self.isSwitching, !self.isRefreshing,
               let row = sender as? AccountRowButton,
               let registry = self.registry,
-              let target = registry.switchTarget(accountKey: row.accountKey)
+              let target = registry.menuAccounts.first(where: { $0.accountKey == row.accountKey }),
+              self.runtimeAccountMismatch || target.accountKey != registry.activeAccountKey
         else { return }
 
         self.statusItem.menu?.cancelTracking()
@@ -237,10 +226,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     private func refreshUsage(force: Bool = false) {
-        guard self.previewAccountCount == nil, !self.isRefreshing, !self.isSwitching, !self.isAutoActivating,
-              force || self.preferences.refreshInterval != .off || self.preferences.autoActivateRefreshedAccounts
+        guard self.previewAccountCount == nil, !self.isRefreshing, !self.isSwitching,
+              force || self.preferences.refreshInterval != .off
         else { return }
-        let previousRegistry = self.registry
         self.isRefreshing = true
         DispatchQueue.global(qos: .utility).async { [weak self] in
             guard let self else { return }
@@ -249,56 +237,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 self.isRefreshing = false
                 self.lastError = result.succeeded ? nil : self.errorMessage(result)
                 self.reloadRegistry(clearError: result.succeeded)
-                if result.succeeded { self.autoActivateRefreshedAccount(comparedTo: previousRegistry) }
-            }
-        }
-    }
-
-    private func autoActivateRefreshedAccount(comparedTo previousRegistry: CodexRegistry?) {
-        guard self.preferences.autoActivateRefreshedAccounts,
-              !self.isSwitching, !self.isAutoActivating,
-              let registry = self.registry
-        else { return }
-
-        let previousByKey = Dictionary(uniqueKeysWithValues: (previousRegistry?.accounts ?? []).map { ($0.accountKey, $0) })
-        let now = Date()
-        guard let candidate = registry.accounts.compactMap({ account -> (CodexAccount, TimeInterval)? in
-            guard let boundary = account.weeklyRefreshBoundary(comparedTo: previousByKey[account.accountKey], now: now),
-                  self.preferences.shouldAttemptAutoActivation(accountKey: account.accountKey, boundary: boundary, now: now)
-            else { return nil }
-            return (account, boundary)
-        }).sorted(by: { $0.1 < $1.1 }).first else { return }
-
-        self.isAutoActivating = true
-        self.preferences.recordAutoActivationAttempt(accountKey: candidate.0.accountKey, at: now)
-        self.updateStatusItem()
-        self.autoActivationWatchdog?.invalidate()
-        self.autoActivationWatchdog = Timer.scheduledTimer(withTimeInterval: 50, repeats: false) { [weak self] _ in
-            guard let self, self.isAutoActivating else { return }
-            self.isAutoActivating = false
-            self.lastError = "Quota activation timed out. It will retry after the one-hour cooldown."
-            self.reloadRegistry(clearError: false)
-        }
-        DispatchQueue.global(qos: .utility).async { [weak self] in
-            guard let self else { return }
-            let result = self.service.activateRefreshedAccountAndRestartCodex(
-                selector: candidate.0.codexAuthSelector,
-                expectedAccountKey: candidate.0.accountKey)
-            DispatchQueue.main.async {
-                self.autoActivationWatchdog?.invalidate()
-                self.autoActivationWatchdog = nil
-                if result.succeeded {
-                    self.preferences.recordAutoActivationSuccess(accountKey: candidate.0.accountKey)
-                }
-                self.isAutoActivating = false
-                self.lastError = result.succeeded ? nil : self.errorMessage(result)
-                self.reloadRegistry(clearError: result.succeeded)
             }
         }
     }
 
     private var effectiveAppearance: NSAppearance? {
         self.previewAppearance ?? self.preferences.appearanceMode.appearance
+    }
+
+    private var presentationRegistry: CodexRegistry? {
+        guard let registry = self.registry else { return nil }
+        return self.runtimeAccountMismatch
+            ? registry.replacingActiveAccountKeyForPresentation(nil)
+            : registry
     }
 
     private func applyAppearance() {
@@ -310,9 +261,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         self.refreshTimer?.invalidate()
         self.refreshTimer = nil
         let configuredInterval = self.preferences.refreshInterval.rawValue
-        let interval = configuredInterval > 0 ? configuredInterval : (self.preferences.autoActivateRefreshedAccounts ? 120 : 0)
-        guard interval > 0 else { return }
-        let refreshTimer = Timer(timeInterval: TimeInterval(interval), repeats: true) { [weak self] _ in
+        guard configuredInterval > 0 else { return }
+        let refreshTimer = Timer(timeInterval: TimeInterval(configuredInterval), repeats: true) { [weak self] _ in
             self?.refreshUsage()
         }
         RunLoop.main.add(refreshTimer, forMode: .common)
