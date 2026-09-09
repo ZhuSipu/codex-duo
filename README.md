@@ -39,14 +39,14 @@ shasum -a 256 -c SHA256SUMS-macOS-arm64.txt
 
 ### Windows
 
-要求：Windows 10 2004 或更高版本，或 Windows 11；x64 处理器；已安装官方 Codex App、Node.js/npm 和 `codex-auth`。发布包已经包含所需的 .NET 运行时。
+要求：Windows 10 2004 或更高版本，或 Windows 11；x64 处理器；已安装官方 Codex App、Node.js/npm、`codex-auth` 和 [Microsoft .NET 8 Desktop Runtime (x64)](https://aka.ms/dotnet/8.0/windowsdesktop-runtime-win-x64.exe)。安装程序会在安装前检测 .NET 运行时，缺失时引导至微软官方下载。
 
 1. 下载 `Codex-Duo-<版本>-Windows-x64-Setup.exe` 和 `SHA256SUMS-Windows-x64.txt`。
 2. 校验安装包的 SHA-256 后运行安装程序。它采用当前用户安装，不需要管理员权限。
 3. 未签名的个人构建可能触发 SmartScreen；继续前请核对校验值和下载来源。
 4. 启动 Codex Duo，在设置中添加账号。
 
-只有在无法正常安装时才建议使用便携 ZIP；请先完整解压到固定目录再启动。开机启动默认关闭。
+如果不希望单独安装 .NET 运行时，可改用包含运行时的自包含便携 ZIP；请先完整解压到固定目录再启动。便携 ZIP 会明显大于轻量安装包。开机启动默认关闭。
 
 ```powershell
 Get-FileHash .\Codex-Duo-*-Windows-x64-Setup.exe -Algorithm SHA256

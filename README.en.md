@@ -39,14 +39,14 @@ shasum -a 256 -c SHA256SUMS-macOS-arm64.txt
 
 ### Windows
 
-Requirements: Windows 10 version 2004 or later or Windows 11, an x64 processor, the official Codex App, Node.js/npm, and `codex-auth`. The release bundles the required .NET runtime.
+Requirements: Windows 10 version 2004 or later or Windows 11, an x64 processor, the official Codex App, Node.js/npm, `codex-auth`, and the [Microsoft .NET 8 Desktop Runtime (x64)](https://aka.ms/dotnet/8.0/windowsdesktop-runtime-win-x64.exe). The installer checks for the runtime before installation and directs you to the official Microsoft download when it is missing.
 
 1. Download `Codex-Duo-<version>-Windows-x64-Setup.exe` and `SHA256SUMS-Windows-x64.txt`.
 2. Verify the installer checksum, then run the installer. It installs per-user and does not require administrator privileges.
 3. If SmartScreen warns about an unsigned personal build, verify the checksum and publisher/source before choosing to continue.
 4. Launch Codex Duo and add an account from Settings.
 
-Use the portable ZIP only when installation is unavailable; extract it to a stable folder before launching. Launch-at-login is opt-in.
+If you prefer not to install .NET separately, use the self-contained portable ZIP and extract it to a stable folder before launching. The portable ZIP is substantially larger than the lightweight installer because it includes the runtime. Launch-at-login is opt-in.
 
 ```powershell
 Get-FileHash .\Codex-Duo-*-Windows-x64-Setup.exe -Algorithm SHA256
