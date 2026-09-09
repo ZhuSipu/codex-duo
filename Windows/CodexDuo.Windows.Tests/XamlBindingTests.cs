@@ -17,6 +17,10 @@ public sealed class XamlBindingTests
         Assert.Equal("ClearType", (string?)trayWindow.Attribute("TextOptions.TextRenderingMode"));
         Assert.DoesNotContain("ScaleTransform", tray.ToString(), StringComparison.Ordinal);
 
+        var trayContent = Assert.Single(trayWindow.Elements(presentation + "Grid"));
+        Assert.Equal(presentation + "Grid", trayContent.Name);
+        Assert.Equal("{DynamicResource PanelBrush}", (string?)trayContent.Attribute("Background"));
+
         var app = XDocument.Load(Path.Combine(AppContext.BaseDirectory, "Fixtures", "App.xaml"));
         var textStyle = Assert.Single(app.Descendants(presentation + "Style"), element =>
             (string?)element.Attribute("TargetType") == "TextBlock");

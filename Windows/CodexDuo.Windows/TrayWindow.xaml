@@ -115,10 +115,8 @@
     </Style>
   </Window.Resources>
 
-  <Border CornerRadius="18" Background="{DynamicResource PanelBrush}"
-          BorderBrush="{DynamicResource StrongBorderBrush}" BorderThickness="1" ToolTip="{Binding Warning}">
-    <Grid>
-      <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="34" /></Grid.RowDefinitions>
+  <Grid Background="{DynamicResource PanelBrush}" ToolTip="{Binding Warning}">
+    <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="34" /></Grid.RowDefinitions>
       <Border Margin="12,10,12,2" Padding="9,7" CornerRadius="8" Background="{DynamicResource InsetBrush}"
               BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0.5"
               Visibility="{Binding Error, Converter={StaticResource StringVisibility}}">
@@ -237,8 +235,5 @@
           </Button>
         </DockPanel>
       </Grid>
-      <Border Height="1" Margin="22,1,22,0" VerticalAlignment="Top" CornerRadius="0.5"
-              Background="#32FFFFFF" IsHitTestVisible="False" />
-    </Grid>
-  </Border>
+  </Grid>
 </Window>
