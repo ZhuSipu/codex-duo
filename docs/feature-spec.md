@@ -4,7 +4,7 @@
 
 This document is the shared behavioral specification for Codex Duo on macOS and Windows. It defines user-visible behavior, logical configuration, data semantics, and error handling. Platform implementations may use different native APIs and UI patterns, but they must not silently diverge from the behavior described here.
 
-The current macOS implementation is authoritative for macOS behavior, and the current Windows implementation is authoritative for Windows behavior. Shared semantics belong in this specification; platform-specific behavior must be labeled explicitly rather than imposed on the other implementation.
+The current macOS implementation is authoritative for macOS behavior, and the current Windows implementation is authoritative for Windows behavior. Shared semantics belong in this specification; platform-specific behavior must be labeled explicitly rather than imposed on the other implementation. Shared visual principles are defined in [`design-language.md`](design-language.md), with the current macOS implementation serving as the visual reference. Platform ownership and host-specific editing rules are defined in [`development-workflow.md`](development-workflow.md).
 
 When behavior changes:
 

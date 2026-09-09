@@ -7,9 +7,10 @@ version=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$proje
 architecture=$(uname -m)
 archive="$output_dir/Codex-Duo-$version-macOS-$architecture.zip"
 dmg="$output_dir/Codex-Duo-$version-macOS-$architecture.dmg"
+checksums="$output_dir/SHA256SUMS-macOS-$architecture.txt"
 
 mkdir -p "$output_dir"
-if [[ -e "$archive" || -e "$dmg" ]]; then
+if [[ -e "$archive" || -e "$dmg" || -e "$checksums" ]]; then
   echo "Release output already exists for version $version" >&2
   exit 1
 fi
@@ -30,5 +31,11 @@ if [[ -n "${CODEX_DUO_NOTARY_PROFILE:-}" ]]; then
   xcrun stapler staple "$dmg"
 fi
 
+(
+  cd "$output_dir"
+  shasum -a 256 "${archive:t}" "${dmg:t}" > "${checksums:t}"
+)
+
 echo "$archive"
 echo "$dmg"
+echo "$checksums"
