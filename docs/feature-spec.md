@@ -40,11 +40,9 @@ These native differences must not change the meanings of accounts, usage, refres
 Codex Duo depends on:
 
 - the official Codex desktop app;
-- a platform-configured `codex-auth` helper for account registry management, usage refresh, login, aliases, removal, and account switching.
+- an externally installed `codex-auth` helper for account registry management, usage refresh, login, aliases, removal, and account switching.
 
-The macOS release bundles the matching upstream native helper and its MIT license. It must run the bundled helper first, with separately installed `codex-auth` commands as a fallback only when the bundled helper is unavailable. The release build downloads a pinned package and verifies its published integrity value; the running app must not download or silently update this dependency.
-
-The Windows release resolves the globally installed npm packages for `codex-auth` and the Codex CLI and invokes their JavaScript entry points through Node.js.
+macOS resolves `codex-auth` from the supported user and system executable paths. Windows resolves the globally installed npm packages for `codex-auth` and the Codex CLI and invokes their JavaScript entry points through Node.js.
 
 The account registry is `~/.codex/accounts/registry.json`, where `~` means the current user's home directory on the running platform. Codex Duo may read this registry but must not directly edit it.
 
@@ -142,7 +140,7 @@ Startup registration uses the platform's native mechanism and reports its real s
 
 Errors must be concise, actionable, and visible in the relevant account or settings surface.
 
-- Missing `codex-auth`: show the dependency as unavailable, ask the user to reinstall Codex Duo, and offer the documented external command only as a recovery fallback.
+- Missing `codex-auth`: show the dependency as unavailable and provide the supported external installation command without executing it automatically.
 - Registry read or decode failure: show unavailable state and the underlying safe error message; do not fabricate data.
 - Command non-zero exit: treat as failure and prefer bounded `stderr`; if empty, show the exit status.
 - Refresh timeout marker: treat as failure even when process status is zero; retain verified cached usage.

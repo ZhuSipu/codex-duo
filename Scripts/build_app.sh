@@ -5,7 +5,6 @@ project_dir="${0:A:h:h}"
 build_dir=$(mktemp -d "${TMPDIR:-/tmp}/codex-duo-build.XXXXXX")
 app_dir="$build_dir/Codex Duo.app"
 binary_dir="$app_dir/Contents/MacOS"
-resources_dir="$app_dir/Contents/Resources"
 
 mkdir -p "$binary_dir"
 
@@ -21,9 +20,6 @@ swiftc \
 
 mkdir -p "$app_dir/Contents"
 cp "$project_dir/Resources/Info.plist" "$app_dir/Contents/Info.plist"
-"$project_dir/Scripts/fetch_codex_auth.sh" \
-  "$resources_dir/Helpers/codex-auth" \
-  "$resources_dir/ThirdPartyLicenses/codex-auth-LICENSE"
 xattr -cr "$app_dir"
 sign_identity="${CODEX_DUO_SIGN_IDENTITY:--}"
 codesign --force --deep --options runtime --sign "$sign_identity" "$app_dir"

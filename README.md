@@ -32,9 +32,7 @@ Shared macOS and Windows behavior is defined in [`docs/feature-spec.md`](docs/fe
 - Apple Silicon Mac for the release build.
 - Swift 5.10 command-line tools only when building from source.
 - The official Codex App.
-- `codex-auth` is included in the macOS app bundle; Node.js and npm are not required.
-
-Every macOS release bundles the matching Apple Silicon `codex-auth` binary and its MIT license. Codex Duo uses that verified binary first, so a user can install the Mac app offline. A separately installed `codex-auth` in `~/.local/bin`, `/opt/homebrew/bin`, or `/usr/local/bin` remains a fallback for development and recovery.
+- [`codex-auth`](https://github.com/Loongphy/codex-auth) with one to ten configured accounts.
 
 ### Windows
 
@@ -88,8 +86,6 @@ cd codex-duo
 ```
 
 The installer builds, ad-hoc signs, copies the app to `/Applications/Codex Duo.app`, and launches it. Set `CODEX_DUO_INSTALL_DIR` to use a different destination directory.
-
-On its first macOS build, the installer downloads the pinned native `codex-auth` package from npm, verifies its published SHA-512 integrity value, and caches it in `~/Library/Caches/CodexDuo`. This happens while creating the app bundle, never on an end user's first launch.
 
 On Windows with the .NET 8 SDK and Inno Setup 6:
 

@@ -278,15 +278,11 @@ final class CodexAuthService {
     }
 
     private func executableURL() -> URL? {
-        var candidates: [URL] = []
-        if let bundledResources = Bundle.main.resourceURL {
-            candidates.append(bundledResources.appendingPathComponent("Helpers/codex-auth", isDirectory: false))
-        }
-        candidates.append(contentsOf: [
+        let candidates = [
             self.fileManager.homeDirectoryForCurrentUser.appendingPathComponent(".local/bin/codex-auth"),
             URL(fileURLWithPath: "/opt/homebrew/bin/codex-auth"),
             URL(fileURLWithPath: "/usr/local/bin/codex-auth"),
-        ])
+        ]
         return candidates.first { self.fileManager.isExecutableFile(atPath: $0.path) }
     }
 
