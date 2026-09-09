@@ -1,37 +1,37 @@
 # Codex Duo
 
-[English](README.md) | [简体中文](README.zh-CN.md)
+[简体中文](README.md) | [English](README.en.md)
 
-Codex Duo is a compact native macOS menu-bar and Windows system-tray app for monitoring and switching between up to ten Codex accounts managed by [`codex-auth`](https://github.com/Loongphy/codex-auth).
+Codex Duo 是一款紧凑的原生桌面工具：在 macOS 上驻留菜单栏，在 Windows 上驻留系统托盘，用于查看并切换最多十个由 [`codex-auth`](https://github.com/Loongphy/codex-auth) 管理的 Codex 账号。
 
-> macOS and Windows are separate native products that share behavior and design principles. The current macOS UI is the visual reference; Windows adopts the same design language with Windows-native controls and system-tray conventions. See [Development boundaries](#development-boundaries).
+> macOS 与 Windows 是两个独立的原生实现，共享产品行为和设计原则。现阶段以 macOS 界面作为视觉基准；Windows 在遵循 Windows 原生控件和系统托盘习惯的前提下对齐同一套设计语言。详见[开发边界](#开发边界)。
 
-## Features
+## 功能
 
-- Native AppKit menu-bar UI on macOS and native .NET 8 WPF system-tray UI on Windows.
-- System-aware light and dark materials, restrained depth, highlights, and motion.
-- Up to ten accounts with adaptive 5-hour, weekly, Free monthly, and other reported usage windows.
-- Reset countdowns and stale-value age badges.
-- Immediate, verified account switching followed by a Codex App restart.
-- Account add, rename, remove, and refresh flows delegated to `codex-auth`.
-- Nine language choices, configurable refresh, proxy support, and optional launch at login.
-- No bundled credentials, account snapshots, analytics, or independent network client.
+- macOS 使用原生 AppKit 菜单栏界面，Windows 使用原生 .NET 8 WPF 系统托盘界面。
+- 跟随系统的明暗材质、克制的层次、光泽和动效。
+- 支持最多十个账号，自适应显示 5 小时、每周、Free 每月及其他实际返回的用量窗口。
+- 显示重置倒计时和陈旧数据时间标记。
+- 点击账号后立即切换，验证成功再重启 Codex App。
+- 添加、重命名、移除和刷新账号均交给 `codex-auth` 处理。
+- 支持九种语言选项、自动刷新、代理和可选的开机启动。
+- 不内置凭据、账号快照、分析统计或独立网络客户端。
 
-## Download and install
+## 下载与安装
 
-Download the artifact for your operating system from the latest [GitHub Release](https://github.com/ZhuSipu/codex-duo/releases/latest). Release downloads are the recommended installation route; source installation is intended for development.
+请从最新的 [GitHub Release](https://github.com/ZhuSipu/codex-duo/releases/latest) 下载与你的操作系统对应的文件。普通用户推荐使用 Release 安装包；源码安装主要供开发使用。
 
 ### macOS
 
-Requirements: macOS 14 or later, Apple Silicon for current release builds, the official Codex App, Node.js/npm, and `codex-auth`.
+要求：macOS 14 或更高版本；当前发布包面向 Apple Silicon；已安装官方 Codex App、Node.js/npm 和 `codex-auth`。
 
-1. Download the `macOS-arm64.dmg` release asset and `SHA256SUMS-macOS-arm64.txt`.
-2. Open the DMG and drag **Codex Duo** to **Applications**.
-3. Verify the checksum, then launch Codex Duo from Applications.
-4. If macOS blocks the current non-notarized personal build, Control-click the app, choose **Open**, then confirm **Open**. Do not disable Gatekeeper globally.
-5. Open Settings and use **Add** to complete Codex login in Terminal.
+1. 下载名称含 `macOS-arm64.dmg` 的发布文件和 `SHA256SUMS-macOS-arm64.txt`。
+2. 打开 DMG，将 **Codex Duo** 拖入 **Applications（应用程序）**。
+3. 校验 SHA-256，然后从应用程序目录启动 Codex Duo。
+4. 当前个人构建尚未经过 Apple 公证；如 macOS 阻止首次启动，请按住 Control 点击应用，依次选择**打开**并再次确认。不要全局关闭 Gatekeeper。
+5. 打开设置，点击**添加**，在终端中完成 Codex 官方登录流程。
 
-The ZIP is provided for portable/manual deployment. Do not run the app from inside the DMG or Downloads folder if you want launch-at-login to work reliably.
+ZIP 仅用于便携或手动部署。如果需要“登录时启动”稳定工作，请不要直接从 DMG 或下载目录运行应用。
 
 ```shell
 shasum -a 256 -c SHA256SUMS-macOS-arm64.txt
@@ -39,51 +39,51 @@ shasum -a 256 -c SHA256SUMS-macOS-arm64.txt
 
 ### Windows
 
-Requirements: Windows 10 version 2004 or later or Windows 11, an x64 processor, the official Codex App, Node.js/npm, and `codex-auth`. The release bundles the required .NET runtime.
+要求：Windows 10 2004 或更高版本，或 Windows 11；x64 处理器；已安装官方 Codex App、Node.js/npm 和 `codex-auth`。发布包已经包含所需的 .NET 运行时。
 
-1. Download `Codex-Duo-<version>-Windows-x64-Setup.exe` and `SHA256SUMS-Windows-x64.txt`.
-2. Verify the installer checksum, then run the installer. It installs per-user and does not require administrator privileges.
-3. If SmartScreen warns about an unsigned personal build, verify the checksum and publisher/source before choosing to continue.
-4. Launch Codex Duo and add an account from Settings.
+1. 下载 `Codex-Duo-<版本>-Windows-x64-Setup.exe` 和 `SHA256SUMS-Windows-x64.txt`。
+2. 校验安装包的 SHA-256 后运行安装程序。它采用当前用户安装，不需要管理员权限。
+3. 未签名的个人构建可能触发 SmartScreen；继续前请核对校验值和下载来源。
+4. 启动 Codex Duo，在设置中添加账号。
 
-Use the portable ZIP only when installation is unavailable; extract it to a stable folder before launching. Launch-at-login is opt-in.
+只有在无法正常安装时才建议使用便携 ZIP；请先完整解压到固定目录再启动。开机启动默认关闭。
 
 ```powershell
 Get-FileHash .\Codex-Duo-*-Windows-x64-Setup.exe -Algorithm SHA256
 Get-Content .\SHA256SUMS-Windows-x64.txt
 ```
 
-### Install the account helper
+### 安装账号辅助工具
 
-Codex Duo detects a missing helper and shows this command in Settings. Install it yourself; the app never silently downloads dependencies:
+Codex Duo 会检测辅助工具是否缺失，并在设置中显示安装命令，但不会静默下载任何依赖：
 
 ```shell
 npm install -g @loongphy/codex-auth@next
 codex-auth --help
 ```
 
-On macOS, Codex Duo searches `~/.local/bin`, `/opt/homebrew/bin`, and `/usr/local/bin`. On Windows, it resolves globally installed npm packages and invokes their JavaScript entry points through Node.js.
+macOS 会在 `~/.local/bin`、`/opt/homebrew/bin` 和 `/usr/local/bin` 中查找 `codex-auth`。Windows 会定位 npm 全局安装的 `codex-auth` 与 Codex CLI，并通过 Node.js 调用其 JavaScript 入口。
 
-## First run and daily use
+## 首次启动与日常使用
 
-With no accounts configured, Codex Duo opens Settings once. Choose **Add**, finish the official Codex login flow in Terminal, and return to Codex Duo. Authentication remains owned by Codex and `codex-auth`; Codex Duo never asks for a password or displays a token.
+如果尚未配置账号，Codex Duo 会在首次启动时打开一次设置。点击**添加**，在终端中完成 Codex 官方登录，然后返回 Codex Duo。认证始终由 Codex 与 `codex-auth` 管理；Codex Duo 不会询问密码，也不会显示令牌。
 
-Select a non-current account row to switch immediately. Switching closes and relaunches Codex, so stop any active response first. Selecting the current account is a no-op.
+点击非当前账号会立即开始切换。切换过程会关闭并重启 Codex，因此请先停止正在生成的回复。点击当前账号不会执行任何操作。
 
-Settings include system/light/dark appearance, language, refresh interval, startup, accounts, and platform-appropriate proxy behavior. Automatic refresh can be Off or 1, 2, 5, 10, or 15 minutes; **Refresh Now** still works when it is Off.
+设置包括外观、语言、刷新间隔、登录时启动、账号和平台对应的代理选项。自动刷新可设为关闭或 1、2、5、10、15 分钟；关闭自动刷新后仍可使用**立即刷新**。
 
-## Build from source
+## 从源码构建
 
-Clone once:
+先克隆仓库：
 
 ```shell
 git clone https://github.com/ZhuSipu/codex-duo.git
 cd codex-duo
 ```
 
-### macOS development
+### macOS 开发
 
-Requires macOS 14+ and Swift 5.10 command-line tools.
+需要 macOS 14+ 和 Swift 5.10 命令行工具。
 
 ```shell
 ./Scripts/test.sh
@@ -91,62 +91,62 @@ app_path=$(./Scripts/build_app.sh)
 open "$app_path"
 ```
 
-To replace an installed development copy safely:
+如需安全替换本机已安装的开发版本：
 
 ```shell
 ./Scripts/install.sh
 ```
 
-Use `./Scripts/install.sh --help` for `--install-dir` and `--no-launch`. The installer validates its tools and built app, stages the replacement in the destination, and restores the previous app if installation fails.
+运行 `./Scripts/install.sh --help` 可查看 `--install-dir` 和 `--no-launch`。脚本会先检查工具和构建结果，在目标目录中暂存新版本；安装失败时会恢复旧版本。
 
-### Windows development
+### Windows 开发
 
-Windows development must be performed on Windows with the .NET 8 SDK. Inno Setup 6 is needed only for the installer.
+Windows 版本必须在 Windows 电脑上开发，并安装 .NET 8 SDK。只有制作安装包时才需要 Inno Setup 6。
 
 ```powershell
 dotnet test Windows/CodexDuo.Windows.sln -c Release
 ./Scripts/package_windows.ps1
 ```
 
-Release artifacts are written to `dist/`. Set `CODEX_DUO_SIGN_THUMBPRINT` and optionally `CODEX_DUO_TIMESTAMP_URL` for Authenticode signing. An ordinary successful Windows `dotnet build` can synchronize to an existing per-user installation; pass `-p:SyncInstalledCodexDuo=false` to disable live synchronization.
+发布文件输出到 `dist/`。可设置 `CODEX_DUO_SIGN_THUMBPRINT`，并按需设置 `CODEX_DUO_TIMESTAMP_URL` 进行 Authenticode 签名。普通 Windows `dotnet build` 成功后可同步到已有的当前用户安装；传入 `-p:SyncInstalledCodexDuo=false` 可关闭实时同步。
 
-## Development boundaries
+## 开发边界
 
-Platform implementations are intentionally independent:
+两个平台的实现必须保持独立：
 
-| Change type | Authoritative document/path | Development host |
+| 变更类型 | 权威文档或路径 | 开发环境 |
 | --- | --- | --- |
-| Shared behavior and data semantics | [`docs/feature-spec.md`](docs/feature-spec.md) | macOS or Windows |
-| Shared visual language | [`docs/design-language.md`](docs/design-language.md) | macOS or Windows; macOS is the current reference |
-| macOS implementation | `Sources/`, `Resources/`, macOS shell scripts | macOS only |
-| Windows implementation | `Windows/`, Windows PowerShell/installer files | Windows only |
+| 共同行为与数据语义 | [`docs/feature-spec.md`](docs/feature-spec.md) | macOS 或 Windows |
+| 共通视觉语言 | [`docs/design-language.md`](docs/design-language.md) | macOS 或 Windows；当前以 macOS 为基准 |
+| macOS 实现 | `Sources/`、`Resources/`、macOS shell 脚本 | 仅 macOS |
+| Windows 实现 | `Windows/`、Windows PowerShell 与安装器文件 | 仅 Windows |
 
-Read [`docs/development-workflow.md`](docs/development-workflow.md) before changing code. A macOS task must not edit Windows implementation files; a Windows task must not edit macOS implementation files. A shared contract change documents both platforms but does not silently implement the other platform.
+修改代码前请阅读 [`docs/development-workflow.zh-CN.md`](docs/development-workflow.zh-CN.md)。macOS 开发任务不得修改 Windows 实现文件；Windows 开发任务不得修改 macOS 实现文件。修改共同约定时，应记录两个平台的影响，但不得顺手在另一平台实现未经验证的改动。
 
-## Privacy and risk
+## 隐私与风险
 
-Codex Duo reads only `~/.codex/accounts/registry.json` and never opens managed `*.auth.json` snapshots. Refresh, login, and switching are delegated to `codex-auth`.
+Codex Duo 只读取 `~/.codex/accounts/registry.json`，不会打开受管理的 `*.auth.json` 快照。刷新、登录和账号切换均交由 `codex-auth` 执行。
 
-By default, `codex-auth list` may send an account access token to OpenAI endpoints to refresh usage. Upstream warns that this relies on non-public behavior, may break without notice, and may carry account risk. Review the [`codex-auth` disclaimer](https://github.com/Loongphy/codex-auth#disclaimer) before use.
+默认情况下，`codex-auth list` 可能会把账号访问令牌发送到 OpenAI 端点以刷新用量。上游明确提示该方式依赖非公开行为，可能随时失效，并可能带来账号风险。使用前请阅读 [`codex-auth` 免责声明](https://github.com/Loongphy/codex-auth#disclaimer)。
 
-## Troubleshooting
+## 故障排查
 
-- **Menu/tray shows —:** verify `codex-auth --help` works and at least one account is configured.
-- **Add does not open on macOS:** confirm Terminal exists in `/System/Applications/Utilities`, then reopen Settings.
-- **Usage is stale:** check the age badge, enable refresh or choose **Refresh Now**. A failed refresh keeps the newest verified value.
-- **Switch interrupted work:** reopen Codex and continue the task; avoid switching during a streaming response.
-- **Launch at login fails:** install the app in the normal platform location, launch it once there, and retry the setting.
-- **Codex will not close:** stop active work and close Codex manually before switching.
+- **菜单或托盘显示 —：**确认 `codex-auth --help` 可运行，并且至少配置了一个账号。
+- **macOS 中“添加”无法打开：**确认终端位于 `/System/Applications/Utilities`，然后重新打开设置。
+- **用量数据陈旧：**查看时间标记，启用自动刷新或点击**立即刷新**。刷新失败时会保留最新的已验证数据。
+- **切换打断工作：**重新打开 Codex 并继续任务；不要在回复生成过程中切换。
+- **登录时启动失败：**将应用安装到平台常规位置，从该位置启动一次，然后重试此设置。
+- **Codex 无法关闭：**先停止活动任务并手动关闭 Codex，再切换账号。
 
-## Uninstall
+## 卸载
 
-Turn off **Open Codex Duo at login** and quit the app first.
+先关闭**登录时启动**并退出应用。
 
-- macOS: move `/Applications/Codex Duo.app` to the Trash.
-- Windows: uninstall **Codex Duo** from Windows Settings; portable users can delete the extracted folder.
+- macOS：将 `/Applications/Codex Duo.app` 移到废纸篓。
+- Windows：在 Windows 设置中卸载 **Codex Duo**；便携版用户可删除解压目录。
 
-Account data belongs to `codex-auth` and is not removed. Remove the helper separately only after confirming no other workflow uses it.
+账号数据属于 `codex-auth`，卸载 Codex Duo 不会删除它。仅在确认其他流程不再依赖时，才单独移除辅助工具。
 
-## License
+## 许可证
 
-MIT. See [LICENSE](LICENSE) and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+MIT。参见 [LICENSE](LICENSE) 和 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
