@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Interop;
@@ -72,6 +73,13 @@ public sealed class StringToVisibilityConverter : IValueConverter
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => Binding.DoNothing;
 }
 
+public sealed class AccountCountToScrollBarVisibilityConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture) =>
+        value is int count && count > 3 ? ScrollBarVisibility.Auto : ScrollBarVisibility.Disabled;
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => Binding.DoNothing;
+}
+
 public static class ThemeManager
 {
     private const int UseImmersiveDarkMode = 20;
@@ -82,9 +90,12 @@ public static class ThemeManager
     public static void Apply(string mode)
     {
         var dark = mode == "dark" || mode == "system" && SystemUsesDarkTheme();
-        Set("WindowBackgroundBrush", dark ? "#FF1E1E20" : "#FFF5F5F7");
-        Set("CardBrush", dark ? "#FF202022" : "#FFFFFFFF");
-        Set("ElevatedBrush", dark ? "#FF343437" : "#FFFFFFFF");
+        Set("WindowBackgroundBrush", dark ? "#FF17181A" : "#FFF3F4F6");
+        Set("PanelBrush", dark ? "#F21F2023" : "#F7F7F7F9");
+        Set("CardBrush", dark ? "#D9252629" : "#E6FFFFFF");
+        Set("ElevatedBrush", dark ? "#F235363A" : "#F7FFFFFF");
+        Set("InsetBrush", dark ? "#14FFFFFF" : "#09000000");
+        Set("BadgeBrush", dark ? "#0FFFFFFF" : "#08000000");
         Set("PrimaryTextBrush", dark ? "#F2FFFFFF" : "#E8000000");
         Set("SecondaryTextBrush", dark ? "#A8FFFFFF" : "#92000000");
         Set("TertiaryTextBrush", dark ? "#72FFFFFF" : "#65000000");
@@ -96,6 +107,9 @@ public static class ThemeManager
         Set("TrackBrush", dark ? "#18FFFFFF" : "#10000000");
         Set("MeterBrush", dark ? "#62FFFFFF" : "#4D000000");
         Set("LowMeterBrush", dark ? "#99FFFFFF" : "#78000000");
+        Set("ActiveMarkerBrush", dark ? "#D1FFFFFF" : "#B8000000");
+        Set("DangerTextBrush", dark ? "#FFFF7770" : "#FFC43A3A");
+        Set("WarningTextBrush", dark ? "#FFFFC35C" : "#FF8A6200");
         Set("AccentBrush", dark ? "#FF0A84FF" : "#FF007AFF");
         Set("AccentTextBrush", "#FFFFFFFF");
     }
@@ -117,10 +131,14 @@ public static class ThemeManager
         _ = DwmSetWindowAttribute(handle, WindowCornerPreference, ref corners, sizeof(int));
     }
 
-    private static bool SystemUsesDarkTheme()
+    public static bool SystemUsesDarkTheme() => !ReadLightThemeSetting("AppsUseLightTheme");
+
+    public static bool SystemTaskbarUsesDarkTheme() => !ReadLightThemeSetting("SystemUsesLightTheme");
+
+    private static bool ReadLightThemeSetting(string valueName)
     {
         using var key = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize");
-        return key?.GetValue("AppsUseLightTheme") is int value && value == 0;
+        return key?.GetValue(valueName) is not int value || value != 0;
     }
 
     [DllImport("dwmapi.dll")]

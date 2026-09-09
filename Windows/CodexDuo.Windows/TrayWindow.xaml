@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:CodexDuo.Windows"
         Title="Codex Duo" Width="356" MaxHeight="720" SizeToContent="Height"
-        WindowStyle="None" AllowsTransparency="False" Background="{DynamicResource WindowBackgroundBrush}"
+        WindowStyle="None" AllowsTransparency="False" Background="{DynamicResource PanelBrush}"
         ShowInTaskbar="False" Topmost="True" ResizeMode="NoResize"
         UseLayoutRounding="True" SnapsToDevicePixels="True"
         TextOptions.TextFormattingMode="Display" TextOptions.TextRenderingMode="ClearType"
@@ -19,7 +19,7 @@
     <Style x:Key="BadgeStyle" TargetType="Border">
       <Setter Property="CornerRadius" Value="5" />
       <Setter Property="Padding" Value="5,1" />
-      <Setter Property="Background" Value="{DynamicResource HoverBrush}" />
+      <Setter Property="Background" Value="{DynamicResource BadgeBrush}" />
       <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
       <Setter Property="BorderThickness" Value="0.5" />
     </Style>
@@ -34,9 +34,9 @@
       <Setter Property="Template">
         <Setter.Value>
           <ControlTemplate TargetType="Button">
-            <Border x:Name="RowChrome" CornerRadius="8" Background="Transparent" BorderBrush="Transparent" BorderThickness="0.5">
+            <Border x:Name="RowChrome" CornerRadius="9" Background="Transparent" BorderBrush="Transparent" BorderThickness="0.5">
               <Grid>
-                <Border x:Name="Refraction" CornerRadius="8" Opacity="0">
+                <Border x:Name="Refraction" CornerRadius="9" Opacity="0">
                   <Border.Background>
                     <RadialGradientBrush Center="0.28,0.18" GradientOrigin="0.28,0.18" RadiusX="0.85" RadiusY="1.2">
                       <GradientStop Color="#38FFFFFF" Offset="0" />
@@ -76,6 +76,23 @@
       <Setter Property="Background" Value="Transparent" />
       <Setter Property="BorderThickness" Value="0" />
       <Setter Property="Padding" Value="7,3" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Button">
+            <Border x:Name="FooterChrome" Padding="{TemplateBinding Padding}" CornerRadius="7" Background="Transparent">
+              <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="FooterChrome" Property="Background" Value="{DynamicResource HoverBrush}" />
+              </Trigger>
+              <Trigger Property="IsPressed" Value="True">
+                <Setter TargetName="FooterChrome" Property="Background" Value="{DynamicResource PressedBrush}" />
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
     </Style>
     <Style x:Key="MeterStyle" TargetType="ProgressBar">
       <Setter Property="Height" Value="3" />
@@ -87,7 +104,7 @@
         <Setter.Value>
           <ControlTemplate TargetType="ProgressBar">
             <Grid Height="3" ClipToBounds="True">
-              <Border CornerRadius="1.5" Background="{TemplateBinding Background}" />
+              <Border x:Name="PART_Track" CornerRadius="1.5" Background="{TemplateBinding Background}" />
               <Decorator x:Name="PART_Indicator" HorizontalAlignment="Left">
                 <Border CornerRadius="1.5" Background="{TemplateBinding Foreground}" />
               </Decorator>
@@ -98,19 +115,25 @@
     </Style>
   </Window.Resources>
 
-  <Border CornerRadius="10" Background="{DynamicResource WindowBackgroundBrush}"
-          BorderBrush="{DynamicResource StrongBorderBrush}" BorderThickness="1" ToolTip="{Binding Warning}">
-    <Grid>
-      <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="34" /></Grid.RowDefinitions>
-      <Border Margin="12,8,12,2" Padding="9,6" CornerRadius="6" Background="{DynamicResource HoverBrush}"
+  <Grid Background="{DynamicResource PanelBrush}" ToolTip="{Binding Warning}">
+    <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="34" /></Grid.RowDefinitions>
+      <Border Margin="12,10,12,2" Padding="9,7" CornerRadius="8" Background="{DynamicResource InsetBrush}"
               BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0.5"
               Visibility="{Binding Error, Converter={StaticResource StringVisibility}}">
-        <TextBlock Text="{Binding Error}" TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" />
+        <DockPanel>
+          <TextBlock Text="&#xEA39;" FontFamily="Segoe Fluent Icons" FontSize="11" Margin="0,0,7,0"
+                     Foreground="{DynamicResource DangerTextBrush}" VerticalAlignment="Top" />
+          <TextBlock Text="{Binding Error}" TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" />
+        </DockPanel>
       </Border>
-      <Border Grid.Row="1" Margin="12,4,12,2" Padding="9,6" CornerRadius="6" Background="{DynamicResource HoverBrush}"
+      <Border Grid.Row="1" Margin="12,4,12,2" Padding="9,7" CornerRadius="8" Background="{DynamicResource InsetBrush}"
               BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0.5"
               Visibility="{Binding Warning, Converter={StaticResource StringVisibility}}">
-        <TextBlock Text="{Binding Warning}" TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" />
+        <DockPanel>
+          <TextBlock Text="&#xE7BA;" FontFamily="Segoe Fluent Icons" FontSize="11" Margin="0,0,7,0"
+                     Foreground="{DynamicResource WarningTextBrush}" VerticalAlignment="Top" />
+          <TextBlock Text="{Binding Warning}" TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" />
+        </DockPanel>
       </Border>
       <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" MaxHeight="568" Padding="8,4" Background="Transparent">
         <Grid>
@@ -124,8 +147,10 @@
                   <Button Style="{StaticResource AccountRowStyle}" Click="Account_Click">
                     <Grid Margin="8,0,9,0">
                       <Grid.ColumnDefinitions><ColumnDefinition Width="7" /><ColumnDefinition Width="9" /><ColumnDefinition /></Grid.ColumnDefinitions>
-                      <Border Width="7" Height="7" CornerRadius="3.5" Background="{DynamicResource SecondaryTextBrush}"
-                              Visibility="{Binding IsActive, Converter={StaticResource BoolVisibility}}" />
+                      <Border Width="7" Height="7" CornerRadius="3.5" Background="{DynamicResource ActiveMarkerBrush}"
+                              Visibility="{Binding IsActive, Converter={StaticResource BoolVisibility}}">
+                        <Border.Effect><DropShadowEffect BlurRadius="4" ShadowDepth="0" Opacity="0.18" /></Border.Effect>
+                      </Border>
                       <Grid Grid.Column="2" VerticalAlignment="Center">
                         <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="6" /><RowDefinition Height="23" /></Grid.RowDefinitions>
                         <DockPanel LastChildFill="True">
@@ -146,7 +171,13 @@
                             <TextBlock.Style>
                               <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
                                 <Setter Property="FontWeight" Value="Medium" />
-                                <Style.Triggers><DataTrigger Binding="{Binding IsActive}" Value="True"><Setter Property="FontWeight" Value="SemiBold" /></DataTrigger></Style.Triggers>
+                                <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}" />
+                                <Style.Triggers>
+                                  <DataTrigger Binding="{Binding IsActive}" Value="True">
+                                    <Setter Property="FontWeight" Value="SemiBold" />
+                                    <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}" />
+                                  </DataTrigger>
+                                </Style.Triggers>
                               </Style>
                             </TextBlock.Style>
                           </TextBlock>
@@ -163,10 +194,10 @@
                                 <DockPanel LastChildFill="False">
                                   <TextBlock Text="{Binding Label}" Style="{StaticResource UsageLabel}" />
                                   <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                                    <TextBlock Text="{Binding PercentageText}" FontSize="9" Foreground="{DynamicResource SecondaryTextBrush}" />
+                                    <TextBlock Text="{Binding PercentageText}" FontFamily="{DynamicResource NumericFontFamily}" FontSize="9" Foreground="{DynamicResource SecondaryTextBrush}" />
                                     <TextBlock Text=" · " FontSize="9" Foreground="{DynamicResource QuaternaryTextBrush}"
                                                Visibility="{Binding HasReset, Converter={StaticResource BoolVisibility}}" />
-                                    <TextBlock Text="{Binding Reset}" FontSize="9" FontWeight="SemiBold"
+                                    <TextBlock Text="{Binding Reset}" FontFamily="{DynamicResource NumericFontFamily}" FontSize="9" FontWeight="SemiBold"
                                                Visibility="{Binding HasReset, Converter={StaticResource BoolVisibility}}" />
                                   </StackPanel>
                                 </DockPanel>
@@ -184,7 +215,7 @@
                       </Grid>
                     </Grid>
                   </Button>
-                  <Border Height="0.5" VerticalAlignment="Bottom" Margin="16,0" Background="{DynamicResource BorderBrush}"
+                  <Border Height="0.5" VerticalAlignment="Bottom" Margin="24,0" Background="{DynamicResource BorderBrush}"
                           Visibility="{Binding ShowsSeparator, Converter={StaticResource BoolVisibility}}" />
                 </Grid>
               </DataTemplate>
@@ -204,6 +235,5 @@
           </Button>
         </DockPanel>
       </Grid>
-    </Grid>
-  </Border>
+  </Grid>
 </Window>

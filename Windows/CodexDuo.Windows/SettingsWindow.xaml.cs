@@ -77,7 +77,6 @@ public partial class SettingsWindow : Window
     {
         var text = viewModel.Text;
         Title = $"Codex Duo {text["settings"]}";
-        PageTitle.Text = text["settings"];
         GeneralHeading.Text = text["general"];
         AccountsHeading.Text = text["accounts"];
         AppearanceLabel.Text = text["appearance"];

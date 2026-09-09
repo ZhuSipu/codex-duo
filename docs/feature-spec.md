@@ -44,6 +44,8 @@ Codex Duo depends on:
 
 macOS resolves `codex-auth` from the supported user and system executable paths. Windows resolves the globally installed npm packages for `codex-auth` and the Codex CLI and invokes their JavaScript entry points through Node.js.
 
+The recommended Windows installer is framework-dependent and requires the x64 Microsoft .NET 8 Desktop Runtime to be installed separately. It must detect a missing runtime before installation and direct the user to the official Microsoft download. The Windows portable archive remains self-contained for environments where installing the runtime separately is undesirable.
+
 The account registry is `~/.codex/accounts/registry.json`, where `~` means the current user's home directory on the running platform. Codex Duo may read this registry but must not directly edit it.
 
 Managed `*.auth.json` snapshots, tokens, passwords, and other credentials are owned by Codex and `codex-auth`. Codex Duo must not open or parse those files. Account mutations must be delegated to `codex-auth`.
@@ -195,8 +197,8 @@ Status values are **Implemented**, **Planned**, **Partial**, or **Not applicable
 | Launch at login | Implemented | Implemented | Windows uses a verified per-user Run entry. |
 | Verified local usage reconciliation | Implemented | Planned | Windows source and feasibility must be designed independently. |
 | macOS build/test CI | Implemented | Not applicable | Independent GitHub Actions job. |
-| Windows build/test CI | Not applicable | Implemented | Independent .NET build, test, and self-contained publish job. |
-| Installer and release packaging | Implemented | Implemented | Windows provides portable ZIP, per-user installer, checksums, and optional Authenticode signing. |
+| Windows build/test CI | Not applicable | Implemented | Independent .NET build and test job verifies framework-dependent and self-contained publish outputs. |
+| Installer and release packaging | Implemented | Implemented | Windows provides a compact framework-dependent per-user installer, a self-contained portable ZIP, checksums, and optional Authenticode signing. |
 | Automatic application updates | Planned | Planned | Not present in the current product. |
 
 ## 13. Cross-platform acceptance criteria

@@ -30,10 +30,12 @@ public sealed class TrayIconTests
         Assert.True(expectedSizes.All(sizes.Contains));
     }
 
-    [Fact]
-    public void TrayIcon_IsPureWhiteOnTransparentBackground()
+    [Theory]
+    [InlineData("CodexDuo.Tray.ico", 255)]
+    [InlineData("CodexDuo.Tray.Light.ico", 0)]
+    public void TrayIcons_UseContrastingMonochromeArtwork(string fileName, byte channel)
     {
-        using var stream = File.OpenRead(Path.Combine(AppContext.BaseDirectory, "Fixtures", "CodexDuo.Tray.ico"));
+        using var stream = File.OpenRead(Path.Combine(AppContext.BaseDirectory, "Fixtures", fileName));
         var decoder = BitmapDecoder.Create(stream, BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.OnLoad);
         foreach (var frame in decoder.Frames)
         {
@@ -52,9 +54,9 @@ public sealed class TrayIconTests
 
                 visiblePixels++;
                 Assert.Equal(255, alpha);
-                Assert.Equal(255, pixels[offset]);
-                Assert.Equal(255, pixels[offset + 1]);
-                Assert.Equal(255, pixels[offset + 2]);
+                Assert.Equal(channel, pixels[offset]);
+                Assert.Equal(channel, pixels[offset + 1]);
+                Assert.Equal(channel, pixels[offset + 2]);
             }
 
             Assert.True(visiblePixels > 0);
@@ -66,9 +68,23 @@ public sealed class TrayIconTests
     {
         var source = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Fixtures", "App.xaml.cs"));
 
-        Assert.Contains("Icon = trayDrawingIcon", source, StringComparison.Ordinal);
+        Assert.Contains("trayIcon.Icon = drawingIcon", source, StringComparison.Ordinal);
         Assert.DoesNotContain("IconSource =", source, StringComparison.Ordinal);
         Assert.Contains("GetSystemMetrics(SmallIconWidth)", source, StringComparison.Ordinal);
+        Assert.Contains("SystemTaskbarUsesDarkTheme()", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void SystemThemeChangesRefreshWindowsAndTrayIcon()
+    {
+        var source = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Fixtures", "App.xaml.cs"));
+        var infrastructure = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Fixtures", "Infrastructure.cs"));
+
+        Assert.Contains("SystemEvents.UserPreferenceChanged += SystemEvents_UserPreferenceChanged", source, StringComparison.Ordinal);
+        Assert.Contains("viewModel?.Settings.Appearance == \"system\"", source, StringComparison.Ordinal);
+        Assert.Contains("ApplyCurrentWindowTheme()", source, StringComparison.Ordinal);
+        Assert.Contains("AppsUseLightTheme", infrastructure, StringComparison.Ordinal);
+        Assert.Contains("SystemUsesLightTheme", infrastructure, StringComparison.Ordinal);
     }
 
     [Fact]

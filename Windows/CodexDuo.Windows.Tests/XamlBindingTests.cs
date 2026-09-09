@@ -17,6 +17,10 @@ public sealed class XamlBindingTests
         Assert.Equal("ClearType", (string?)trayWindow.Attribute("TextOptions.TextRenderingMode"));
         Assert.DoesNotContain("ScaleTransform", tray.ToString(), StringComparison.Ordinal);
 
+        var trayContent = Assert.Single(trayWindow.Elements(presentation + "Grid"));
+        Assert.Equal(presentation + "Grid", trayContent.Name);
+        Assert.Equal("{DynamicResource PanelBrush}", (string?)trayContent.Attribute("Background"));
+
         var app = XDocument.Load(Path.Combine(AppContext.BaseDirectory, "Fixtures", "App.xaml"));
         var textStyle = Assert.Single(app.Descendants(presentation + "Style"), element =>
             (string?)element.Attribute("TargetType") == "TextBlock");
@@ -83,24 +87,35 @@ public sealed class XamlBindingTests
     }
 
     [Fact]
-    public void SettingsWindow_UsesACompactSingleColumnProductSurface()
+    public void SettingsWindow_UsesCompactGroupedProductSurfaces()
     {
         var document = XDocument.Load(Path.Combine(AppContext.BaseDirectory, "Fixtures", "SettingsWindow.xaml"));
         XNamespace presentation = "http://schemas.microsoft.com/winfx/2006/xaml/presentation";
         XNamespace x = "http://schemas.microsoft.com/winfx/2006/xaml";
 
-        var surface = Assert.Single(document.Descendants(presentation + "Border"), element =>
-            (string?)element.Attribute(x + "Name") == "SettingsSurface");
-        Assert.Equal("{StaticResource Surface}", (string?)surface.Attribute("Style"));
+        string[] surfaceNames = ["GeneralSurface", "AccountsSurface", "TrayGuideSurface"];
+        foreach (var name in surfaceNames)
+        {
+            var surface = Assert.Single(document.Descendants(presentation + "Border"), element =>
+                (string?)element.Attribute(x + "Name") == name);
+            Assert.Equal("{StaticResource Surface}", (string?)surface.Attribute("Style"));
+        }
 
         var window = Assert.Single(document.Elements(presentation + "Window"));
-        Assert.Equal("560", (string?)window.Attribute("Width"));
-        Assert.Single(surface.Elements(presentation + "ScrollViewer"));
-        Assert.Empty(surface.Elements(presentation + "Grid"));
+        Assert.Equal("520", (string?)window.Attribute("Width"));
+        Assert.Equal("592", (string?)window.Attribute("Height"));
+        Assert.DoesNotContain(document.Descendants(), element =>
+            (string?)element.Attribute(x + "Name") == "PageTitle");
+        var scrollViewer = Assert.Single(document.Descendants(presentation + "ScrollViewer"));
+        Assert.All(surfaceNames, name => Assert.Contains(scrollViewer.Descendants(presentation + "Border"), element =>
+            (string?)element.Attribute(x + "Name") == name));
 
         var accountList = Assert.Single(document.Descendants(presentation + "ListBox"), element =>
             (string?)element.Attribute(x + "Name") == "AccountList");
-        Assert.Equal("112", (string?)accountList.Attribute("MaxHeight"));
+        Assert.Equal("146", (string?)accountList.Attribute("MaxHeight"));
+        Assert.Equal(
+            "{Binding Accounts.Count, Converter={StaticResource AccountScrollVisibility}}",
+            (string?)accountList.Attribute("ScrollViewer.VerticalScrollBarVisibility"));
 
         string[] alignedControls = ["LanguageBox", "AppearanceControl", "IntervalBox", "StartupCheck"];
         foreach (var name in alignedControls)
