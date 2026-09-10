@@ -17,13 +17,9 @@ Codex Duo is a compact native desktop utility. It brings remaining usage and res
 
 ## Why use Codex Duo
 
-- **See every account at once.** One panel shows up to ten accounts and their reported usage windows.
-- **Know when limits reset.** Remaining percentages, reset countdowns, and data age are always visible.
-- **Switch with confidence.** Choose an account and Codex Duo verifies the switch before reopening the Codex App.
-- **Keep useful data during failures.** The newest verified snapshot remains visible and is clearly marked when stale.
-- **Manage accounts in one place.** Add, rename, remove, and refresh accounts, manually or on a schedule.
-- **Respect clear privacy boundaries.** No authentication snapshots are read, no tokens are stored, and no analytics or telemetry are included.
-- **Feel at home on your system.** System, light, and dark appearance, nine language choices, and optional launch at login are supported.
+- **One-click switching.** Choose an account from the menu and Codex Duo handles the switch, verification, and Codex App relaunch.
+- **Native design.** AppKit on the macOS menu bar and WPF in the Windows system tray feel at home with each platform's appearance and conventions.
+- **Simple and efficient.** See remaining usage, reset countdowns, and data status for multiple accounts in one compact panel.
 
 ## Product surfaces
 
