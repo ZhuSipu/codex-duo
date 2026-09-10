@@ -6,6 +6,17 @@ Codex Duo 是一款紧凑的原生桌面工具：在 macOS 上驻留菜单栏，
 
 > macOS 与 Windows 是两个独立的原生实现，共享产品行为和设计原则。现阶段以 macOS 界面作为视觉基准；Windows 在遵循 Windows 原生控件和系统托盘习惯的前提下对齐同一套设计语言。详见[开发边界](#开发边界)。
 
+## macOS 演示
+
+<p align="center">
+  <img src="docs/assets/codex-duo-macos-live-demo.webp" alt="在 macOS 上打开 Codex Duo 双账号菜单并进入设置" width="680">
+</p>
+
+<p align="center">
+  <img src="docs/assets/codex-duo-macos-accounts.png" alt="Codex Duo 双账号菜单" width="48%">
+  <img src="docs/assets/codex-duo-macos-settings.png" alt="Codex Duo 设置窗口" width="48%">
+</p>
+
 ## 功能
 
 - macOS 使用原生 AppKit 菜单栏界面，Windows 使用原生 .NET 8 WPF 系统托盘界面。

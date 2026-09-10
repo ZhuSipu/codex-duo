@@ -6,6 +6,17 @@ Codex Duo is a compact native macOS menu-bar and Windows system-tray app for mon
 
 > macOS and Windows are separate native products that share behavior and design principles. The current macOS UI is the visual reference; Windows adopts the same design language with Windows-native controls and system-tray conventions. See [Development boundaries](#development-boundaries).
 
+## macOS demo
+
+<p align="center">
+  <img src="docs/assets/codex-duo-macos-live-demo.webp" alt="Opening the two-account Codex Duo menu and entering Settings on macOS" width="680">
+</p>
+
+<p align="center">
+  <img src="docs/assets/codex-duo-macos-accounts.png" alt="Codex Duo two-account menu" width="48%">
+  <img src="docs/assets/codex-duo-macos-settings.png" alt="Codex Duo Settings window" width="48%">
+</p>
+
 ## Features
 
 - Native AppKit menu-bar UI on macOS and native .NET 8 WPF system-tray UI on Windows.
