@@ -25,9 +25,8 @@ esac
 cache_root="${CODEX_DUO_VENDOR_CACHE_DIR:-$project_dir/.build/vendor}"
 cache_dir="$cache_root/codex-auth/$version/$machine_architecture"
 binary="$cache_dir/codex-auth"
-archive="$cache_dir/codex-auth.tar.gz"
 asset="codex-auth-macOS-$release_architecture.tar.gz"
-download_url="https://github.com/Loongphy/codex-auth/releases/download/v$version/$asset"
+archive="$project_dir/Vendor/codex-auth/$version/$asset"
 
 verify_sha256() {
   local file_path="$1"
@@ -42,16 +41,11 @@ if verify_sha256 "$binary" "$binary_sha256"; then
 fi
 
 mkdir -p "$cache_dir"
-temporary_archive="$archive.download"
-rm -f "$temporary_archive"
-curl --fail --location --silent --show-error +  --connect-timeout 20 --max-time 180 --retry 3 --retry-all-errors +  --output "$temporary_archive" "$download_url"
-if ! verify_sha256 "$temporary_archive" "$archive_sha256"; then
-  rm -f "$temporary_archive"
+if ! verify_sha256 "$archive" "$archive_sha256"; then
   echo "Checksum verification failed for $asset" >&2
   exit 65
 fi
 
-mv "$temporary_archive" "$archive"
 rm -f "$binary"
 tar -xzf "$archive" -C "$cache_dir" codex-auth
 if ! verify_sha256 "$binary" "$binary_sha256"; then
