@@ -36,6 +36,10 @@ These are relationships, not cross-platform hard-coded pixels:
 
 The macOS constants in `Sources/CodexDuo/CodexDuoStyle.swift` are the current measurable reference. Windows developers translate those relationships into DPI-aware WPF resources rather than copying raw macOS values.
 
+## Shared icon mark
+
+Both platforms use the same interlocking rounded loop mark for the application and status/tray surfaces. Windows keeps one geometry across themes and selects an explicit monochrome resource for taskbar contrast: `CodexDuo.Tray.Dark.ico` is an opaque white mark for dark taskbars, and `CodexDuo.Tray.Light.ico` is an opaque black mark for light taskbars. The two resources must contain the same DPI frames (`16`, `20`, `24`, `28`, `32`, `40`, and `48` px); only the foreground color differs. Windows generates both files from `CodexDuo.png` with `Scripts/generate_tray_icon.py` so the mark cannot drift between themes.
+
 ## Content hierarchy
 
 Each account row presents, in order:

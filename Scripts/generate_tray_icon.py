@@ -7,14 +7,14 @@ from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "Windows" / "CodexDuo.Windows" / "Resources" / "CodexDuo.png"
-OUTPUT = ROOT / "Windows" / "CodexDuo.Windows" / "Resources" / "CodexDuo.Tray.ico"
+OUTPUT_DIRECTORY = ROOT / "Windows" / "CodexDuo.Windows" / "Resources"
 # Native shell sizes from 100% through 300% scaling. In particular, Windows
 # uses 28 px at 175%; omitting it makes the shell resample a neighbouring frame
 # and turns a binary-white glyph grey again.
 SIZES = (16, 20, 24, 28, 32, 40, 48)
 
 
-def render_frame(size: int) -> Image.Image:
+def render_frame(size: int, color: int) -> Image.Image:
     # Use the application's light outline as a hollow monochrome tray glyph.
     # The dark body stays transparent so the compact mark remains airy and
     # recognizable at notification-area sizes.
@@ -49,16 +49,15 @@ def render_frame(size: int) -> Image.Image:
     threshold = maximum_alpha * 0.16
     outline = outline.point(lambda value: 255 if value >= threshold else 0)
 
-    frame = Image.new("RGBA", (size, size), (255, 255, 255, 0))
+    solid = Image.new("L", (size, size), color)
     x = (size - outline.width) // 2
     y = (size - outline.height) // 2
     alpha = Image.new("L", (size, size))
     alpha.paste(outline, (x, y))
-    frame.putalpha(alpha)
-    return frame
+    return Image.merge("RGBA", (solid, solid, solid, alpha))
 
 
-def write_ico(frames: list[tuple[int, Image.Image]]) -> None:
+def write_ico(output_path: Path, frames: list[tuple[int, Image.Image]]) -> None:
     encoded: list[tuple[int, bytes]] = []
     for size, frame in frames:
         buffer = BytesIO()
@@ -73,14 +72,24 @@ def write_ico(frames: list[tuple[int, Image.Image]]) -> None:
         payload.append(data)
         offset += len(data)
 
-    with OUTPUT.open("wb") as output:
+    with output_path.open("wb") as output:
         output.write(struct.pack("<HHH", 0, 1, len(encoded)))
         output.write(b"".join(entries))
         output.write(b"".join(payload))
 
 
 def main() -> None:
-    write_ico([(size, render_frame(size)) for size in SIZES])
+    OUTPUT_DIRECTORY.mkdir(parents=True, exist_ok=True)
+    # Keep the exact same mark geometry for both taskbar backgrounds. Only the
+    # foreground changes, so light/dark mode cannot drift into two symbols.
+    write_ico(
+        OUTPUT_DIRECTORY / "CodexDuo.Tray.Dark.ico",
+        [(size, render_frame(size, 255)) for size in SIZES],
+    )
+    write_ico(
+        OUTPUT_DIRECTORY / "CodexDuo.Tray.Light.ico",
+        [(size, render_frame(size, 0)) for size in SIZES],
+    )
 
 
 if __name__ == "__main__":

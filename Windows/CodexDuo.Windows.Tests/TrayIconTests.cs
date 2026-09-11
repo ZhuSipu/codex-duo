@@ -8,7 +8,7 @@ public sealed class TrayIconTests
     [Fact]
     public void TrayIcon_ProvidesPixelOptimizedCommonSizes()
     {
-        using var stream = File.OpenRead(Path.Combine(AppContext.BaseDirectory, "Fixtures", "CodexDuo.Tray.ico"));
+        using var stream = File.OpenRead(Path.Combine(AppContext.BaseDirectory, "Fixtures", "CodexDuo.Tray.Dark.ico"));
         using var reader = new BinaryReader(stream);
 
         Assert.Equal(0, reader.ReadUInt16());
@@ -31,7 +31,7 @@ public sealed class TrayIconTests
     }
 
     [Theory]
-    [InlineData("CodexDuo.Tray.ico", 255)]
+    [InlineData("CodexDuo.Tray.Dark.ico", 255)]
     [InlineData("CodexDuo.Tray.Light.ico", 0)]
     public void TrayIcons_UseContrastingMonochromeArtwork(string fileName, byte channel)
     {
@@ -60,6 +60,35 @@ public sealed class TrayIconTests
             }
 
             Assert.True(visiblePixels > 0);
+        }
+    }
+
+    [Fact]
+    public void TrayIcons_ShareTheSameGeometryAcrossThemes()
+    {
+        static IReadOnlyList<(int Width, int Height, byte[] Alpha)> ReadAlpha(string fileName)
+        {
+            using var stream = File.OpenRead(Path.Combine(AppContext.BaseDirectory, "Fixtures", fileName));
+            var decoder = BitmapDecoder.Create(stream, BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.OnLoad);
+            return decoder.Frames.Select(frame =>
+            {
+                var bitmap = new FormatConvertedBitmap(frame, PixelFormats.Bgra32, null, 0);
+                var pixels = new byte[bitmap.PixelWidth * bitmap.PixelHeight * 4];
+                bitmap.CopyPixels(pixels, bitmap.PixelWidth * 4, 0);
+                var alpha = new byte[bitmap.PixelWidth * bitmap.PixelHeight];
+                for (var index = 0; index < alpha.Length; index++) alpha[index] = pixels[index * 4 + 3];
+                return (bitmap.PixelWidth, bitmap.PixelHeight, alpha);
+            }).ToArray();
+        }
+
+        var dark = ReadAlpha("CodexDuo.Tray.Dark.ico");
+        var light = ReadAlpha("CodexDuo.Tray.Light.ico");
+        Assert.Equal(dark.Count, light.Count);
+        for (var index = 0; index < dark.Count; index++)
+        {
+            Assert.Equal(dark[index].Width, light[index].Width);
+            Assert.Equal(dark[index].Height, light[index].Height);
+            Assert.Equal(dark[index].Alpha, light[index].Alpha);
         }
     }
 

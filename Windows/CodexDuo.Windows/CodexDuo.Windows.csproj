@@ -20,7 +20,7 @@
   </ItemGroup>
   <ItemGroup>
     <Resource Include="Resources\CodexDuo.ico" />
-    <Resource Include="Resources\CodexDuo.Tray.ico" />
+    <Resource Include="Resources\CodexDuo.Tray.Dark.ico" />
     <Resource Include="Resources\CodexDuo.Tray.Light.ico" />
     <Resource Include="Resources\CodexDuo.png" />
   </ItemGroup>

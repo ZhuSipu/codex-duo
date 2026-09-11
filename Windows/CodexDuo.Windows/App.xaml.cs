@@ -104,7 +104,7 @@ public partial class App : Application, IDisposable
     {
         if (trayIcon is null) return;
         var resourceName = ThemeManager.SystemTaskbarUsesDarkTheme()
-            ? "CodexDuo.Tray.ico"
+            ? "CodexDuo.Tray.Dark.ico"
             : "CodexDuo.Tray.Light.ico";
         var iconResource = GetResourceStream(new Uri($"pack://application:,,,/Resources/{resourceName}"))
             ?? throw new InvalidDataException("The tray icon resource is missing.");
