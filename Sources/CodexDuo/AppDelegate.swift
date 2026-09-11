@@ -12,13 +12,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var isSwitching = false
     private var isMenuOpen = false
     private var lastError: String?
-    private var runtimeAccountMismatch = false
     private var previewAppearance: NSAppearance?
     private weak var accountOverviewView: AccountOverviewView?
     private lazy var settingsController = SettingsWindowController(
         preferences: self.preferences,
         service: self.service,
-        registryProvider: { [weak self] in self?.presentationRegistry },
+        registryProvider: { [weak self] in self?.registry },
         onAccountsChanged: { [weak self] in self?.reloadRegistry() },
         onRefreshRequested: { [weak self] in self?.refreshUsage(force: true) })
 
@@ -99,22 +98,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private func reloadRegistry(clearError: Bool = true) {
         if let previewAccountCount {
             self.registry = CodexRegistry.preview(accountCount: previewAccountCount)
-            self.runtimeAccountMismatch = false
             self.lastError = nil
             self.updateStatusItem()
             return
         }
         do {
             self.registry = try self.service.loadRegistry()
-            self.runtimeAccountMismatch = self.registry.map {
-                !self.service.isCodexRuntimeSynchronized(with: $0)
-            } ?? false
             if !self.isSwitching && clearError { self.lastError = nil }
             self.updateStatusItem()
             self.refreshOpenMenuIfNeeded()
         } catch {
             self.registry = nil
-            self.runtimeAccountMismatch = false
             self.lastError = error.localizedDescription
             self.updateStatusItem()
             self.refreshOpenMenuIfNeeded()
@@ -124,7 +118,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private func refreshOpenMenuIfNeeded() {
         guard self.isMenuOpen else { return }
         self.accountOverviewView?.update(
-            registry: self.presentationRegistry,
+            registry: self.registry,
             isWorking: self.isSwitching || self.isRefreshing,
             errorMessage: self.lastError)
     }
@@ -142,13 +136,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             return
         }
 
-        if self.runtimeAccountMismatch {
-            button.title = "⚠︎"
-            button.font = codexDuoRoundedFont(ofSize: NSFont.systemFontSize, weight: .semibold)
-            button.toolTip = "Codex is still using an earlier account. Choose an account to restart Codex."
-            return
-        }
-
         let accounts = registry.menuAccounts
         button.title = StatusItemPresentation.title(for: registry)
         button.font = codexDuoRoundedFont(ofSize: NSFont.systemFontSize, weight: .semibold)
@@ -163,7 +150,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         let accountsItem = NSMenuItem()
         let accountOverviewView = AccountOverviewView(
-            registry: self.presentationRegistry,
+            registry: self.registry,
             isWorking: self.isSwitching || self.isRefreshing,
             errorMessage: self.lastError,
             resetTextProvider: { _, window in window.resetText() },
@@ -199,7 +186,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
               let row = sender as? AccountRowButton,
               let registry = self.registry,
               let target = registry.menuAccounts.first(where: { $0.accountKey == row.accountKey }),
-              self.runtimeAccountMismatch || target.accountKey != registry.activeAccountKey
+              target.accountKey != registry.activeAccountKey
         else { return }
 
         self.statusItem.menu?.cancelTracking()
@@ -243,13 +230,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private var effectiveAppearance: NSAppearance? {
         self.previewAppearance ?? self.preferences.appearanceMode.appearance
-    }
-
-    private var presentationRegistry: CodexRegistry? {
-        guard let registry = self.registry else { return nil }
-        return self.runtimeAccountMismatch
-            ? registry.replacingActiveAccountKeyForPresentation(nil)
-            : registry
     }
 
     private func applyAppearance() {

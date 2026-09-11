@@ -48,15 +48,6 @@ struct CodexRegistry: Decodable {
         return self.accounts.first { $0.accountKey == activeAccountKey }
     }
 
-    func replacingActiveAccountKeyForPresentation(_ accountKey: String?) -> CodexRegistry {
-        CodexRegistry(
-            schemaVersion: self.schemaVersion,
-            activeAccountKey: accountKey,
-            previousActiveAccountKey: self.previousActiveAccountKey,
-            activeAccountActivatedAtMS: self.activeAccountActivatedAtMS,
-            accounts: self.accounts)
-    }
-
     func switchTarget(accountKey: String) -> CodexAccount? {
         guard accountKey != self.activeAccountKey else { return nil }
         return self.menuAccounts.first { $0.accountKey == accountKey }

@@ -74,20 +74,6 @@ enum ModelTests {
         precondition(StatusItemPresentation.title(for: CodexRegistry.preview(accountCount: 3)) == "A 70% · A 83%")
         precondition(StatusItemPresentation.title(for: CodexRegistry.preview(accountCount: 10)) == "A 70% · A 83%")
 
-        let activation = Int64(2_000_000)
-        precondition(CodexAuthService.runtimeIsSynchronized(
-            appIsRunning: false, launchDate: nil, activationTimeMilliseconds: activation))
-        precondition(CodexAuthService.runtimeIsSynchronized(
-            appIsRunning: true,
-            launchDate: Date(timeIntervalSince1970: 2_001),
-            activationTimeMilliseconds: activation))
-        precondition(!CodexAuthService.runtimeIsSynchronized(
-            appIsRunning: true,
-            launchDate: Date(timeIntervalSince1970: 1_998),
-            activationTimeMilliseconds: activation))
-        precondition(!CodexAuthService.runtimeIsSynchronized(
-            appIsRunning: true, launchDate: nil, activationTimeMilliseconds: activation))
-
         let localLine = #"{"timestamp":"2026-08-25T11:34:31.137Z","type":"event_msg","payload":{"type":"token_count","rate_limits":{"limit_id":"codex","primary":{"used_percent":6.0,"window_minutes":10080,"resets_at":1788260768},"secondary":null}}}"#
         let localSample = LocalCodexUsageReader.parseLine(localLine)
         precondition(localSample?.snapshot.weekly?.remainingPercent(now: localSample!.observedAt) == 94)

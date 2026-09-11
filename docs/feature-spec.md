@@ -107,7 +107,7 @@ For each registry account, Codex Duo uses:
 - `plan` as optional informational data;
 - `last_usage` and `last_usage_at` as the cached usage snapshot and observation time.
 
-The registry's `active_account_key` determines the active account. If more than ten accounts exist, show the first ten registry accounts, except that the active account must replace the tenth item when it would otherwise be omitted. Accounts outside this displayed set are not switch targets in the main account view.
+The registry's `active_account_key` is the sole source of truth for active-account presentation. Helper bookkeeping fields such as activation time and account history must not override it. If more than ten accounts exist, show the first ten registry accounts, except that the active account must replace the tenth item when it would otherwise be omitted. Accounts outside this displayed set are not switch targets in the main account view.
 
 If the registry is missing, unreadable, invalid, or empty, show an unavailable state rather than fabricated account or usage data. On first launch with no configured accounts, expose account setup prominently.
 

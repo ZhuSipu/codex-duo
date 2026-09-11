@@ -215,26 +215,6 @@ final class CodexAuthService {
         return CommandResult(status: 0, stdout: switchResult.stdout, stderr: "")
     }
 
-    func isCodexRuntimeSynchronized(with registry: CodexRegistry) -> Bool {
-        let applications = NSRunningApplication.runningApplications(withBundleIdentifier: self.codexBundleIdentifier)
-        return Self.runtimeIsSynchronized(
-            appIsRunning: !applications.isEmpty,
-            launchDate: applications.compactMap(\.launchDate).min(),
-            activationTimeMilliseconds: registry.activeAccountActivatedAtMS)
-    }
-
-    static func runtimeIsSynchronized(
-        appIsRunning: Bool,
-        launchDate: Date?,
-        activationTimeMilliseconds: Int64?) -> Bool
-    {
-        guard appIsRunning else { return true }
-        guard let activationTimeMilliseconds else { return true }
-        guard let launchDate else { return false }
-        let activationDate = Date(timeIntervalSince1970: Double(activationTimeMilliseconds) / 1_000)
-        return launchDate.addingTimeInterval(1) >= activationDate
-    }
-
     private func stopCodexApp() -> CommandResult {
         var applications = NSRunningApplication.runningApplications(withBundleIdentifier: self.codexBundleIdentifier)
         guard !applications.isEmpty else { return CommandResult(status: 0, stdout: "", stderr: "") }
