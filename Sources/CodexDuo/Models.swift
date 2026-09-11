@@ -117,10 +117,13 @@ struct CodexRegistry: Decodable {
                 plan: "plus",
                 lastUsage: UsageSnapshot(
                     primary: RateLimitWindow(
+                        usedPercent: max(0, used - 12),
+                        windowMinutes: 300,
+                        resetsAt: Date().addingTimeInterval(Double(index + 1) * 9_000).timeIntervalSince1970),
+                    secondary: RateLimitWindow(
                         usedPercent: used,
                         windowMinutes: 10_080,
-                        resetsAt: Date().addingTimeInterval(Double(index + 1) * 43_200).timeIntervalSince1970),
-                    secondary: nil),
+                        resetsAt: Date().addingTimeInterval(Double(index + 1) * 43_200).timeIntervalSince1970)),
                 lastUsageAt: nil)
         }
         return CodexRegistry(

@@ -37,6 +37,22 @@ final class AccountOverviewView: NSView {
             self.rows.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -4),
         ])
         self.update(registry: registry, isWorking: isWorking, errorMessage: errorMessage)
+        if ProcessInfo.processInfo.environment["CODEX_DUO_PREVIEW_ANIMATE"] == "1" {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+                self?.runPreviewAnimation()
+            }
+        }
+    }
+
+    private func runPreviewAnimation() {
+        guard let row = self.rows.arrangedSubviews.compactMap({ $0 as? AccountRowButton }).first else { return }
+        row.setPreviewHover(true)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.75) { [weak self, weak row] in
+            row?.setPreviewHover(false)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.75) { [weak self] in
+                self?.runPreviewAnimation()
+            }
+        }
     }
 
     func update(registry: CodexRegistry?, isWorking: Bool, errorMessage: String?) {
@@ -270,6 +286,18 @@ final class AccountRowButton: NSButton {
     override func mouseExited(with event: NSEvent) {
         guard self.canSwitch, !self.isCommitting else { return }
         self.animateMaterial(base: 0, highlight: 0, scale: 1, duration: 0.18)
+    }
+
+    func setPreviewHover(_ highlighted: Bool) {
+        guard self.canSwitch else { return }
+        self.refractionLayer.startPoint = CGPoint(x: 0.26, y: 0.35)
+        self.refractionLayer.endPoint = CGPoint(x: 0.82, y: 0.92)
+        let dark = self.effectiveAppearance.codexDuoIsDark
+        self.animateMaterial(
+            base: highlighted ? (dark ? 0.58 : 0.72) : 0,
+            highlight: highlighted ? (dark ? 0.52 : 0.62) : 0,
+            scale: 1,
+            duration: highlighted ? 0.22 : 0.28)
     }
 
     override func mouseDown(with event: NSEvent) {
