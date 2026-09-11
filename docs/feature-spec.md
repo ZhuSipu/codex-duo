@@ -44,11 +44,38 @@ Codex Duo depends on:
 
 The macOS app bundles a pinned, architecture-matched native `codex-auth` executable. The repository must contain the verified upstream release archives so builds do not depend on a runtime download. The build must verify the selected release archive and executable SHA-256 values, sign the executable as nested code, and include its license and exact version. The app must prefer that bundled copy; supported external executable paths remain a development fallback. The installed app must never download or update the helper at runtime.
 
-Windows currently resolves the globally installed npm packages for `codex-auth` and the Codex CLI and invokes their JavaScript entry points through Node.js. Bundled-helper delivery for Windows is Planned and must be implemented and verified on Windows.
+Windows currently resolves the globally installed npm package for `codex-auth` and invokes its JavaScript entry point through Node.js. Bundled-helper delivery for Windows is Planned and must be implemented and verified on Windows.
 
 A platform that does not bundle the helper may offer user-initiated guided setup when `codex-auth` is missing. The action must state that it installs the helper, run in a visible platform-appropriate terminal, avoid administrator privileges when possible, report failures, and continue into the official `codex-auth login` flow only after installation succeeds. If Node.js/npm is unavailable, direct the user to install it rather than attempting an opaque bootstrap. On a bundled-helper platform, a missing helper means the app installation is incomplete and the user should reinstall the app.
 
-The recommended Windows installer is framework-dependent and requires the x64 Microsoft .NET 8 Desktop Runtime to be installed separately. It must detect a missing runtime before installation and direct the user to the official Microsoft download. The Windows portable archive remains self-contained for environments where installing the runtime separately is undesirable.
+The target primary Windows installer is self-contained: it includes the required .NET runtime and the native `codex-auth` helper, installs per user without administrator privileges, and requires no separate Node.js, npm, .NET, or helper setup. A smaller framework-dependent installer may remain as an optional advanced artifact; it must detect a missing x64 Microsoft .NET 8 Desktop Runtime before installation and direct the user to the official Microsoft download. The Windows portable archive remains self-contained.
+
+### 3.1 Dependency-free onboarding target
+
+Every supported platform must converge on the same user journey:
+
+1. install the official Codex desktop app;
+2. download one Codex Duo installer or self-contained archive for the current OS and architecture;
+3. install or extract Codex Duo and launch it;
+4. if no account exists, see account setup automatically without a dependency warning;
+5. choose **Add**, then complete the official `codex-auth login` flow in a visible platform-appropriate terminal;
+6. return to Codex Duo and see the new account and refreshed usage automatically;
+7. choose another account to perform a verified switch and Codex restart.
+
+The primary user flow must not require a package manager, developer toolchain, administrator shell, manual PATH editing, copied install command, or separate dependency download.
+
+Bundled-helper delivery must follow these shared rules:
+
+- keep an exact upstream version, source release URL, archive SHA-256, executable SHA-256, architecture, and license in version-controlled build inputs;
+- build from a repository-contained, verified upstream archive so a clean checkout can package the app without downloading the helper;
+- fail the build if the archive hash, extracted executable hash, architecture, or expected version does not match;
+- place the helper inside the platform package and resolve it before any external installation;
+- sign the helper before signing the outer app, installer, or archive where the platform supports nested signing;
+- update the helper only through a new Codex Duo release; never download or self-update it when the installed app runs;
+- keep external helper discovery only as a development or recovery fallback, not as a normal user-facing requirement;
+- include the full upstream license and do not bundle registry data, authentication snapshots, or credentials.
+
+For the Windows implementation, use the upstream native Windows x64 release rather than its npm wrapper. The bundled executable must be invoked directly through `ToolCommand.Executable`; Node.js-based discovery may remain only as a fallback. Remove dependency-install commands and dependency-ready labels from the normal settings flow. A missing or non-executable bundled helper in an installed build is an incomplete installation and must produce a reinstall message.
 
 The account registry is `~/.codex/accounts/registry.json`, where `~` means the current user's home directory on the running platform. Codex Duo may read this registry but must not directly edit it.
 
@@ -217,5 +244,19 @@ A feature is behaviorally aligned when both platforms can demonstrate, with plat
 - switching is serialized and verified before success;
 - no credential files or secrets are read or emitted;
 - each platform builds and tests in an independent CI job.
+
+Bundled-helper and onboarding acceptance additionally require:
+
+- a clean build with an empty dependency cache and no network access can produce the platform package;
+- the packaged helper has the expected version, hash before platform signing, executable format, and architecture;
+- the final ZIP, DMG, or installer checksum verifies and the installed helper can run from its packaged location;
+- a clean user profile with no Node.js, npm, external `codex-auth`, registry, or Codex Duo preferences reaches the **Add** action on first launch;
+- successful login is detected without restarting Codex Duo, then triggers registry reload and usage refresh;
+- cancelled or failed login leaves existing accounts untouched and exposes a retryable, actionable status;
+- an existing registry works immediately after upgrade without migration or reauthentication;
+- a missing or damaged bundled helper produces an incomplete-installation error and never falls back to downloading software;
+- account refresh, rename, removal, verified switching, and Codex relaunch all use the bundled helper in packaged-build tests;
+- CI inspects the produced package, rather than only testing the source tree, and verifies that the helper and third-party notice are present;
+- native smoke testing covers first launch, login launch, normal account display, and switching on the target operating system before the status is changed to Implemented.
 
 If a platform cannot support a shared behavior, record the limitation and proposed specification change before implementation rather than silently introducing a platform exception.
