@@ -22,6 +22,7 @@ swiftc \
 
 mkdir -p "$app_dir/Contents"
 cp "$project_dir/Resources/Info.plist" "$app_dir/Contents/Info.plist"
+cp "$project_dir/Resources/CodexDuo.icns" "$resource_dir/CodexDuo.icns"
 cp "$project_dir/THIRD_PARTY_NOTICES.md" "$resource_dir/THIRD_PARTY_NOTICES.md"
 helper_source=$("$project_dir/Scripts/prepare_codex_auth.sh" "$(uname -m)")
 cp "$helper_source" "$helper_dir/codex-auth"

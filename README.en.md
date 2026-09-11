@@ -10,6 +10,10 @@
 </p>
 
 <p align="center">
+  <img src="Windows/CodexDuo.Windows/Resources/CodexDuo.png" alt="Codex Duo logo" width="144">
+</p>
+
+<p align="center">
   <img src="docs/assets/codex-duo-macos-live-demo.webp" alt="Codex Duo showing account usage and opening Settings from the macOS menu bar" width="800">
 </p>
 

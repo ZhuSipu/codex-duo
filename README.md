@@ -10,6 +10,10 @@
 </p>
 
 <p align="center">
+  <img src="Windows/CodexDuo.Windows/Resources/CodexDuo.png" alt="Codex Duo Logo" width="144">
+</p>
+
+<p align="center">
   <img src="docs/assets/codex-duo-macos-live-demo.webp" alt="Codex Duo 在 macOS 菜单栏中显示账号用量并打开设置" width="800">
 </p>
 

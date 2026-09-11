@@ -12,6 +12,8 @@
     <string>Codex Duo</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
+    <key>CFBundleIconFile</key>
+    <string>CodexDuo.icns</string>
     <key>CFBundleShortVersionString</key>
     <string>0.9.0</string>
     <key>LSApplicationCategoryType</key>
