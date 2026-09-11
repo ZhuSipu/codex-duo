@@ -17,6 +17,9 @@ jobs:
           app_path=$(./Scripts/build_app.sh)
           codesign --verify --deep --strict "$app_path"
           test -x "$app_path/Contents/MacOS/CodexDuo"
+          test -x "$app_path/Contents/Helpers/codex-auth"
+          test "$("$app_path/Contents/Helpers/codex-auth" --version)" = "codex-auth 0.3.0-alpha.10"
+          test -f "$app_path/Contents/Resources/THIRD_PARTY_NOTICES.md"
 
   windows:
     runs-on: windows-latest

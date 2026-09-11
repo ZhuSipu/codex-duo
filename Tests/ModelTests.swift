@@ -206,6 +206,7 @@ enum ModelTests {
         precondition(SettingsText.value("appearance", language: .french) == "Apparence")
         for language in AppLanguage.allCases.dropFirst() {
             precondition(SettingsText.value("window.title", language: language) != "window.title")
+            precondition(SettingsText.value("appIncomplete", language: language) != "appIncomplete")
             precondition(!language.displayName.isEmpty)
         }
         precondition(preferences.refreshInterval == .off)
@@ -261,6 +262,24 @@ enum ModelTests {
         precondition(!FileManager.default.fileExists(atPath: commandFile.path))
         let loginOutcome = try String(contentsOf: outcomeFile, encoding: .utf8)
         precondition(loginOutcome == "7")
+
+        let helperDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("codex-duo-helper-test-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: helperDirectory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: helperDirectory) }
+        let bundledHelper = helperDirectory.appendingPathComponent("bundled-codex-auth")
+        let externalHelper = helperDirectory.appendingPathComponent("external-codex-auth")
+        for helper in [bundledHelper, externalHelper] {
+            try Data("#!/bin/zsh\nexit 0\n".utf8).write(to: helper)
+            try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: helper.path)
+        }
+        precondition(CodexAuthService.preferredExecutableURL(
+            bundledURL: bundledHelper,
+            externalURLs: [externalHelper]) == bundledHelper)
+        try FileManager.default.removeItem(at: bundledHelper)
+        precondition(CodexAuthService.preferredExecutableURL(
+            bundledURL: bundledHelper,
+            externalURLs: [externalHelper]) == externalHelper)
         let proxySettings: [String: Any] = [
             "HTTPEnable": 1, "HTTPProxy": "proxy.internal.example", "HTTPPort": 8080,
             "HTTPSEnable": 1, "HTTPSProxy": "secure-proxy.example", "HTTPSPort": 8443,

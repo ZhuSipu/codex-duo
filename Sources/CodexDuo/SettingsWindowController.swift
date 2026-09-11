@@ -155,7 +155,6 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
     private let appearanceLabel = NSTextField(labelWithString: "")
     private let refreshLabel = NSTextField(labelWithString: "")
     private let proxyLabel = NSTextField(labelWithString: "")
-    private let dependencyLabel = NSTextField(labelWithString: "")
     private let accountSummaryLabel = NSTextField(labelWithString: "")
     private let statusLabel = NSTextField(labelWithString: "")
     private let tableView = NSTableView()
@@ -164,7 +163,6 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
     private let renameButton = NSButton(title: "Rename…", target: nil, action: nil)
     private let removeButton = NSButton(title: "Remove…", target: nil, action: nil)
     private let refreshButton = NSButton(title: "Refresh Now", target: nil, action: nil)
-    private let installButton = NSButton(title: "Copy Install Command", target: nil, action: nil)
     private var accounts: [CodexAccount] = []
     private var activeAccountKey: String?
     private var isBusy = false
@@ -272,10 +270,8 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
         generalStack.spacing = 0
         let generalCard = self.card(containing: generalStack)
 
-        self.dependencyLabel.font = codexDuoRoundedFont(ofSize: 9.5, weight: .medium)
-        self.dependencyLabel.textColor = .tertiaryLabelColor
         self.accountSummaryLabel.font = codexDuoRoundedFont(ofSize: 10.5, weight: .semibold)
-        let accountStatus = NSStackView(views: [self.accountSummaryLabel, NSView(), self.dependencyLabel])
+        let accountStatus = NSStackView(views: [self.accountSummaryLabel, NSView()])
         accountStatus.orientation = .horizontal
         accountStatus.alignment = .centerY
         accountStatus.distribution = .fill
@@ -305,13 +301,10 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
         self.removeButton.action = #selector(self.removeAccount(_:))
         self.refreshButton.target = self
         self.refreshButton.action = #selector(self.refreshNow(_:))
-        self.installButton.target = self
-        self.installButton.action = #selector(self.copyInstallCommand(_:))
         self.styleActionButton(self.addButton, symbol: "plus")
         self.styleActionButton(self.renameButton, symbol: "pencil")
         self.styleActionButton(self.removeButton, symbol: "minus.circle")
         self.styleActionButton(self.refreshButton, symbol: "arrow.clockwise")
-        self.styleActionButton(self.installButton, symbol: "terminal")
         self.statusLabel.font = codexDuoRoundedFont(ofSize: 10, weight: .medium)
         self.statusLabel.textColor = .secondaryLabelColor
         self.statusLabel.lineBreakMode = .byWordWrapping
@@ -321,7 +314,6 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
             self.addButton,
             self.renameButton,
             self.removeButton,
-            self.installButton,
             NSView(),
             self.refreshButton,
         ])
@@ -439,7 +431,6 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
         self.renameButton.title = self.text("rename")
         self.removeButton.title = self.text("remove")
         self.refreshButton.title = self.text("refreshNow")
-        self.installButton.title = self.text("install")
 
         ["system", "light", "dark"].enumerated().forEach {
             self.appearanceControl.setLabel(self.text($0.element), forSegment: $0.offset)
@@ -465,9 +456,6 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
         self.activeAccountKey = registry?.activeAccountKey
         self.accountScrollView.hasVerticalScroller = self.accounts.count > 2
         self.tableView.reloadData()
-        self.dependencyLabel.stringValue = self.service.versionText.map {
-            String(format: self.text("dependencyReady"), $0)
-        } ?? self.text("dependencyMissing")
         self.accountSummaryLabel.stringValue = self.accounts.isEmpty
             ? self.text("none")
             : String(format: self.text("accountCount"), self.accounts.count)
@@ -477,7 +465,7 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
 
     private var defaultStatus: String {
         if self.loginMonitor != nil { return self.text("loginWaiting") }
-        if !self.service.isAvailable { return self.text("installHelp") }
+        if !self.service.isAvailable { return self.text("appIncomplete") }
         if self.accounts.isEmpty { return self.text("addHelp") }
         return ""
     }
@@ -500,7 +488,6 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
         for button in [self.addButton, self.renameButton, self.removeButton, self.refreshButton] {
             button.isHidden = !self.service.isAvailable
         }
-        self.installButton.isHidden = self.service.isAvailable
     }
 
     func numberOfRows(in tableView: NSTableView) -> Int { self.accounts.count }
@@ -703,13 +690,6 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
         DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in
             self?.reloadState(status: self?.text("refreshStarted") ?? "")
         }
-    }
-
-    @objc private func copyInstallCommand(_ sender: Any?) {
-        let command = "npm install -g @loongphy/codex-auth@next"
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(command, forType: .string)
-        self.setStatus(self.text("installCopied"))
     }
 
     private var selectedAccount: CodexAccount? {

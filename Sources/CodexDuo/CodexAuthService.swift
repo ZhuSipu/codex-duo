@@ -16,6 +16,7 @@ final class CodexAuthService {
 
     private let fileManager = FileManager.default
     private let customProxyURLProvider: () -> String
+    private let bundledExecutableURLProvider: () -> URL?
     private let codexBundleIdentifier = "com.openai.codex"
     private let localUsageReader = LocalCodexUsageReader()
     private let localUsageStore = LocalUsageStore()
@@ -24,8 +25,15 @@ final class CodexAuthService {
     private var observedActiveAccountKey: String?
     private var activeAccountObservedAt = Date()
 
-    init(customProxyURLProvider: @escaping () -> String = { AppPreferences.shared.customProxyURL }) {
+    init(
+        customProxyURLProvider: @escaping () -> String = { AppPreferences.shared.customProxyURL },
+        bundledExecutableURLProvider: @escaping () -> URL? = {
+            Bundle.main.bundleURL
+                .appendingPathComponent("Contents/Helpers/codex-auth", isDirectory: false)
+        })
+    {
         self.customProxyURLProvider = customProxyURLProvider
+        self.bundledExecutableURLProvider = bundledExecutableURLProvider
     }
 
     var registryURL: URL {
@@ -34,13 +42,6 @@ final class CodexAuthService {
     }
 
     var isAvailable: Bool { self.executableURL() != nil }
-
-    var versionText: String? {
-        guard let executableURL = self.executableURL() else { return nil }
-        let result = self.runExecutable(path: executableURL.path, arguments: ["--version"])
-        guard result.succeeded else { return nil }
-        return result.stdout.trimmingCharacters(in: .whitespacesAndNewlines)
-    }
 
     func loadRegistry() throws -> CodexRegistry {
         let data = try Data(contentsOf: self.registryURL)
@@ -278,12 +279,25 @@ final class CodexAuthService {
     }
 
     private func executableURL() -> URL? {
-        let candidates = [
+        let externalCandidates = [
             self.fileManager.homeDirectoryForCurrentUser.appendingPathComponent(".local/bin/codex-auth"),
             URL(fileURLWithPath: "/opt/homebrew/bin/codex-auth"),
             URL(fileURLWithPath: "/usr/local/bin/codex-auth"),
         ]
-        return candidates.first { self.fileManager.isExecutableFile(atPath: $0.path) }
+        return Self.preferredExecutableURL(
+            bundledURL: self.bundledExecutableURLProvider(),
+            externalURLs: externalCandidates,
+            fileManager: self.fileManager)
+    }
+
+    static func preferredExecutableURL(
+        bundledURL: URL?,
+        externalURLs: [URL],
+        fileManager: FileManager = .default) -> URL?
+    {
+        ([bundledURL].compactMap { $0 } + externalURLs).first {
+            fileManager.isExecutableFile(atPath: $0.path)
+        }
     }
 
     private func runCodexAuth(

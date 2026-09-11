@@ -16,6 +16,20 @@ if [[ -e "$archive" || -e "$dmg" || -e "$checksums" ]]; then
 fi
 
 app_path=$("$project_dir/Scripts/build_app.sh")
+
+if [[ -n "${CODEX_DUO_NOTARY_PROFILE:-}" ]]; then
+  if [[ -z "${CODEX_DUO_SIGN_IDENTITY:-}" || "$CODEX_DUO_SIGN_IDENTITY" == "-" ]]; then
+    echo "CODEX_DUO_SIGN_IDENTITY must name a Developer ID certificate when notarizing." >&2
+    exit 1
+  fi
+  notary_archive=$(mktemp "${TMPDIR:-/tmp}/codex-duo-notary.XXXXXX.zip")
+  ditto -c -k --sequesterRsrc --keepParent "$app_path" "$notary_archive"
+  xcrun notarytool submit "$notary_archive" --keychain-profile "$CODEX_DUO_NOTARY_PROFILE" --wait
+  rm -f "$notary_archive"
+  xcrun stapler staple "$app_path"
+  xcrun stapler validate "$app_path"
+fi
+
 ditto -c -k --sequesterRsrc --keepParent "$app_path" "$archive"
 unzip -tq "$archive" >/dev/null
 
@@ -29,6 +43,7 @@ hdiutil imageinfo "$dmg" >/dev/null
 if [[ -n "${CODEX_DUO_NOTARY_PROFILE:-}" ]]; then
   xcrun notarytool submit "$dmg" --keychain-profile "$CODEX_DUO_NOTARY_PROFILE" --wait
   xcrun stapler staple "$dmg"
+  xcrun stapler validate "$dmg"
 fi
 
 (
