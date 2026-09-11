@@ -1,8 +1,8 @@
 # Codex Duo
 
 <p align="center">
-  <strong>在菜单栏里掌握每个 Codex 账号。</strong><br>
-  查看剩余用量、了解重置时间，并在需要时快速切换账号。
+  <strong>专为 Codex 打造的一键账号切换器。</strong><br>
+  以克制的设计与流畅的交互，让多账号切换成为菜单栏里自然的一步。
 </p>
 
 <p align="center">
@@ -13,13 +13,13 @@
   <img src="docs/assets/codex-duo-macos-live-demo.webp" alt="Codex Duo 在 macOS 菜单栏中显示账号用量并打开设置" width="800">
 </p>
 
-Codex Duo 是一款紧凑的原生桌面工具。它在 macOS 菜单栏或 Windows 系统托盘中集中显示多个 Codex 账号的剩余用量和重置倒计时，并通过 [`codex-auth`](https://github.com/Loongphy/codex-auth) 完成账号管理与切换。
+Codex Duo 专为使用多个 Codex 账号的人设计。它把账号切换、剩余用量和重置倒计时收进一个精致的菜单栏面板，并通过 [`codex-auth`](https://github.com/Loongphy/codex-auth) 安全地完成账号管理与切换。
 
 ## 为什么使用 Codex Duo
 
-- **一键切换。** 在菜单中选择目标账号，Codex Duo 会自动完成切换、验证并重新打开 Codex App。
-- **原生设计。** macOS 使用 AppKit 菜单栏，Windows 使用 WPF 系统托盘，并自然融入系统外观与操作习惯。
-- **简洁高效。** 在一个紧凑面板中查看多个账号的剩余用量、重置倒计时和数据状态。
+- **一键切换。** 选择目标账号即可完成切换、验证并重新打开 Codex App，整个过程简单直接。
+- **专为 Codex 设计。** 账号、剩余用量和重置时间集中呈现，每一项信息都服务于 Codex 多账号使用场景。
+- **原生液态玻璃。** 通透材质、清晰层级与克制动效自然融入系统，让复杂的多账号状态始终轻盈有序。
 
 ## 产品界面
 
@@ -28,7 +28,7 @@ Codex Duo 是一款紧凑的原生桌面工具。它在 macOS 菜单栏或 Windo
   <img src="docs/assets/codex-duo-macos-settings.png" alt="Codex Duo macOS 设置窗口" width="49%">
 </p>
 
-macOS 使用原生 AppKit 菜单栏界面，Windows 使用原生 .NET 8 WPF 系统托盘界面。两个版本共享相同的账号、用量和切换规则，同时遵循各自平台的操作习惯。
+Codex Duo 以液态玻璃风格呈现账号与用量信息，用通透材质和紧凑布局保持清晰。macOS 使用原生 AppKit 菜单栏界面，Windows 使用原生 .NET 8 WPF 系统托盘界面，并分别遵循各自平台的操作习惯。
 
 ## 下载与要求
 

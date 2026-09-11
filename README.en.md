@@ -1,8 +1,8 @@
 # Codex Duo
 
 <p align="center">
-  <strong>Every Codex account, visible from the menu bar.</strong><br>
-  Check remaining usage, see reset times, and switch accounts when you need to.
+  <strong>A one-click account switcher, made for Codex.</strong><br>
+  With restrained design and fluid interaction, multi-account switching becomes a natural part of your menu bar.
 </p>
 
 <p align="center">
@@ -13,13 +13,13 @@
   <img src="docs/assets/codex-duo-macos-live-demo.webp" alt="Codex Duo showing account usage and opening Settings from the macOS menu bar" width="800">
 </p>
 
-Codex Duo is a compact native desktop utility. It brings remaining usage and reset countdowns for multiple Codex accounts into the macOS menu bar or Windows system tray, with account management and switching handled through [`codex-auth`](https://github.com/Loongphy/codex-auth).
+Codex Duo is designed for people who use multiple Codex accounts. It brings account switching, remaining usage, and reset countdowns into one polished menu-bar panel, with account management and switching handled securely through [`codex-auth`](https://github.com/Loongphy/codex-auth).
 
 ## Why use Codex Duo
 
-- **One-click switching.** Choose an account from the menu and Codex Duo handles the switch, verification, and Codex App relaunch.
-- **Native design.** AppKit on the macOS menu bar and WPF in the Windows system tray feel at home with each platform's appearance and conventions.
-- **Simple and efficient.** See remaining usage, reset countdowns, and data status for multiple accounts in one compact panel.
+- **One-click switching.** Choose an account and Codex Duo handles the switch, verification, and Codex App relaunch in one straightforward flow.
+- **Designed for Codex.** Accounts, remaining usage, and reset times are presented together, with every detail shaped around multi-account Codex workflows.
+- **Native Liquid Glass.** Translucent materials, precise hierarchy, and restrained motion blend into the system, keeping complex account states light and orderly.
 
 ## Product surfaces
 
@@ -28,7 +28,7 @@ Codex Duo is a compact native desktop utility. It brings remaining usage and res
   <img src="docs/assets/codex-duo-macos-settings.png" alt="Codex Duo Settings on macOS" width="49%">
 </p>
 
-macOS uses a native AppKit menu-bar interface, while Windows uses a native .NET 8 WPF system-tray interface. Both versions share the same account, usage, and switching rules while following their platform's conventions.
+Codex Duo presents accounts and usage through a Liquid Glass visual language, combining translucent materials with a compact, legible layout. macOS uses a native AppKit menu-bar interface, while Windows uses a native .NET 8 WPF system-tray interface, each following its platform's conventions.
 
 ## Download and requirements
 
