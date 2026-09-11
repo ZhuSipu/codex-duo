@@ -27,6 +27,20 @@ Codex Duo is designed for people who use multiple Codex accounts. It brings acco
 - **Designed for Codex.** Accounts, remaining usage, and reset times are presented together, with every detail shaped around multi-account Codex workflows.
 - **Native Liquid Glass.** Translucent materials, precise hierarchy, and restrained motion blend into the system, keeping complex account states light and orderly.
 
+## Comparable projects and positioning
+
+The comparison below is based on each project's public README and release information. It describes product trade-offs rather than ranking overall quality.
+
+| Project | Primary form | Trade-off relative to Codex Duo |
+| --- | --- | --- |
+| [Codex Switcher](https://github.com/Lampese/codex-switcher) | Cross-platform desktop app with tray and main window | Broader feature set with statistics, warm-ups, auto-updates, and credential import/export, but higher information density and configuration complexity; it is not purely menu-bar-first. |
+| [codex-multi-auth](https://github.com/ndycode/codex-multi-auth) | CLI / terminal dashboard | Adds health checks, failover, and runtime rotation, but requires npm and command-line workflows rather than a native menu-bar entry point. |
+| [codex-auth](https://github.com/Loongphy/codex-auth) | CLI account-management tool | A powerful underlying tool, but it has no graphical interface, menu-bar status, or visual usage panel; Codex App users generally restart after switching. |
+| [CodexBar](https://github.com/steipete/CodexBar) | macOS multi-provider menu-bar monitor | Covers more providers, but it is not focused on Codex multi-account switching, active-account verification, and Codex relaunch. |
+| [Quotio](https://github.com/nguyenphutrong/quotio) | macOS menu-bar and proxy control center | Supports multiple providers, quotas, and automatic failover, but is centered on CLIProxyAPI and a broader dashboard, with a heavier setup path rather than focused official Codex App switching. |
+
+Codex Duo intentionally gives up some breadth for a shorter path: view accounts and usage from the menu bar, choose a target account, then close, switch, verify, and relaunch Codex. Its core value is not having the most features; it is making account switching feel immediate and deliberate.
+
 ## Product surfaces
 
 <p align="center">

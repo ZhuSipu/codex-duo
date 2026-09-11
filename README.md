@@ -27,6 +27,20 @@ Codex Duo 专为使用多个 Codex 账号的人设计。它把账号切换、剩
 - **专为 Codex 设计。** 账号、剩余用量和重置时间集中呈现，每一项信息都服务于 Codex 多账号使用场景。
 - **原生液态玻璃。** 通透材质、清晰层级与克制动效自然融入系统，让复杂的多账号状态始终轻盈有序。
 
+## 同类项目与定位
+
+下面的比较基于各项目公开 README 与 Release 信息，重点呈现产品取舍，并不构成质量排名。
+
+| 项目 | 主要形态 | 相对 Codex Duo 的取舍 |
+| --- | --- | --- |
+| [Codex Switcher](https://github.com/Lampese/codex-switcher) | 跨平台桌面应用、托盘与主窗口 | 功能更完整，包含统计、Warm-up、自动更新和凭证导入导出，但信息密度与配置复杂度更高，不是纯粹的菜单栏工具。 |
+| [codex-multi-auth](https://github.com/ndycode/codex-multi-auth) | CLI / 终端 Dashboard | 支持健康检查、故障转移和运行时轮换，但依赖 npm 与命令行操作，没有原生菜单栏入口。 |
+| [codex-auth](https://github.com/Loongphy/codex-auth) | CLI 账号管理工具 | 是强大的底层工具，但没有图形界面、菜单栏状态或可视化用量面板；Codex App 通常需要切换后重启。 |
+| [CodexBar](https://github.com/steipete/CodexBar) | macOS 多 Provider 菜单栏监控 | 用量监控覆盖面更广，但并不专注于 Codex 多账号切换、活动账号验证和 Codex 重启。 |
+| [Quotio](https://github.com/nguyenphutrong/quotio) | macOS 菜单栏与代理控制中心 | 支持多 Provider、配额和自动故障转移，但围绕 CLIProxyAPI 与 Dashboard 展开，配置路径更重，也不是专门的官方 Codex App 切换器。 |
+
+Codex Duo 有意放弃部分广度，专注于一条更短的路径：在菜单栏查看账号与用量，选择目标账号，然后完成关闭、切换、验证和重新打开 Codex。它的核心价值不是“功能最多”，而是“切换足够直接”。
+
 ## 产品界面
 
 <p align="center">
