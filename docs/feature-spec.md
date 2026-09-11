@@ -44,7 +44,7 @@ Codex Duo depends on:
 
 The macOS app bundles a pinned, architecture-matched native `codex-auth` executable. The repository must contain the verified upstream release archives so builds do not depend on a runtime download. The build must verify the selected release archive and executable SHA-256 values, sign the executable as nested code, and include its license and exact version. The app must prefer that bundled copy; supported external executable paths remain a development fallback. The installed app must never download or update the helper at runtime.
 
-Windows currently resolves the globally installed npm package for `codex-auth` and invokes its JavaScript entry point through Node.js. Bundled-helper delivery for Windows is Planned and must be implemented and verified on Windows.
+Windows release packages bundle the pinned native Windows x64 `codex-auth` executable and invoke it directly. External npm/Node.js discovery remains available only to explicitly configured development or recovery builds.
 
 A platform that does not bundle the helper may offer user-initiated guided setup when `codex-auth` is missing. The action must state that it installs the helper, run in a visible platform-appropriate terminal, avoid administrator privileges when possible, report failures, and continue into the official `codex-auth login` flow only after installation succeeds. If Node.js/npm is unavailable, direct the user to install it rather than attempting an opaque bootstrap. On a bundled-helper platform, a missing helper means the app installation is incomplete and the user should reinstall the app.
 
@@ -223,15 +223,15 @@ Status values are **Implemented**, **Planned**, **Partial**, or **Not applicable
 | Manual and scheduled refresh | Implemented | Implemented | Delegated to `codex-auth`. |
 | Verified account switching and Codex restart | Implemented | Implemented | Windows uses bounded native process control and the packaged-app identifier. |
 | Add, rename, and remove account | Implemented | Implemented | Delegated to `codex-auth`. |
-| Bundled `codex-auth` helper | Implemented | Planned | macOS bundles and signs pinned native ARM64/X64 release binaries at build time; Windows requires independent implementation and verification. |
-| Dependency-free primary installer | Implemented | Planned | macOS requires only the official Codex app; the Windows target is a self-contained per-user installer with the .NET runtime and native helper included. |
+| Bundled `codex-auth` helper | Implemented | Implemented | Both release packages bundle a pinned native helper after archive, executable, version, and architecture verification; Windows uses the native x64 release directly. |
+| Dependency-free primary installer | Implemented | Implemented | Both platforms require only the official Codex app; Windows provides self-contained per-user installer and portable ZIP artifacts. |
 | Appearance modes | Implemented | Implemented | Native rendering differs. |
 | Nine language choices including System | Implemented | Implemented | Both settings surfaces expose the same choices and system fallback. |
 | Launch at login | Implemented | Implemented | Windows uses a verified per-user Run entry. |
 | Verified local usage reconciliation | Implemented | Planned | Windows source and feasibility must be designed independently. |
 | macOS build/test CI | Implemented | Not applicable | Independent GitHub Actions job. |
-| Windows build/test CI | Not applicable | Implemented | Independent .NET build and test job verifies framework-dependent and self-contained publish outputs. |
-| Installer and release packaging | Implemented | Implemented | Windows provides a compact framework-dependent per-user installer, a self-contained portable ZIP, checksums, and optional Authenticode signing. |
+| Windows build/test CI | Not applicable | Implemented | Independent .NET build and test job verifies self-contained publish outputs and package contents. |
+| Installer and release packaging | Implemented | Implemented | Windows provides a self-contained per-user installer, a self-contained portable ZIP, checksums, and optional Authenticode signing. |
 | Automatic application updates | Planned | Planned | Not present in the current product. |
 
 ## 13. Cross-platform acceptance criteria

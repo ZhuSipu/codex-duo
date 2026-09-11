@@ -47,23 +47,14 @@ Download `Codex-Duo-<version>-macOS-arm64.dmg`, open it, and drag **Codex Duo** 
 - Windows 10 version 2004 or later, or Windows 11
 - x64 processor
 - The official Codex App
-- Node.js/npm and `codex-auth`
-- The installer requires the [.NET 8 Desktop Runtime (x64)](https://aka.ms/dotnet/8.0/windowsdesktop-runtime-win-x64.exe)
 
-Run `Codex-Duo-<version>-Windows-x64-Setup.exe` for a per-user installation that needs no administrator privileges. To avoid installing .NET separately, download the self-contained portable ZIP, which includes the runtime. Unsigned builds may trigger SmartScreen; verify the checksum and download source before continuing.
-
-Windows currently still requires the account helper to be installed separately:
-
-```shell
-npm install -g @loongphy/codex-auth@next
-codex-auth --help
-```
+Run `Codex-Duo-<version>-Windows-x64-Setup.exe` for a self-contained per-user installation that needs no administrator privileges. The portable ZIP is also self-contained. Both packages include the pinned native `codex-auth` helper and the .NET runtime; Node.js, npm, and a separate helper install are not required. Unsigned builds may trigger SmartScreen; verify the checksum and download source before continuing.
 
 ## Get started
 
-1. Launch Codex Duo, open Settings, and choose **Add**.
-2. Complete the official Codex login in Terminal.
-3. Return to Codex Duo and select any non-current account to switch.
+1. Launch the official Codex App, then launch Codex Duo.
+2. Open Settings and choose **Add**. Codex Duo opens a visible PowerShell window for the official Codex login.
+3. Return to Codex Duo; the new account and usage refresh automatically. Select any non-current account to switch.
 
 Authentication remains owned by Codex and `codex-auth`. Codex Duo never asks for your password or displays access tokens.
 
@@ -84,7 +75,7 @@ Automatic refresh can be Off or run every 1, 2, 5, 10, or 15 minutes. **Refresh 
 ## Troubleshooting
 
 - **The macOS menu shows —:** add at least one account. If Settings reports an incomplete installation, download and reinstall the complete app.
-- **The Windows tray shows —:** verify that `codex-auth --help` works and at least one account is configured.
+- **The Windows tray shows —:** choose **Add** in Settings to configure the first account. If the app reports an incomplete installation, download and reinstall the complete package.
 - **Usage is marked stale:** check the age label, enable automatic refresh, or choose **Refresh Now**. A failed refresh keeps the newest verified snapshot.
 - **An account will not switch:** stop active work, close Codex manually, and try again.
 - **Launch at login does not work:** install the app in the normal system location, launch it once from there, and enable the setting again.
@@ -109,9 +100,9 @@ app_path=$(./Scripts/build_app.sh)
 open "$app_path"
 ```
 
-The repository includes pinned native macOS `codex-auth` release archives. The build verifies the SHA-256 of both the archive and executable before embedding and signing it, so neither the build nor the installed app downloads dependencies.
+The repository includes pinned native macOS and Windows `codex-auth` release archives. The build verifies the SHA-256 of both the archive and executable before embedding and signing it, so neither the build nor the installed app downloads dependencies.
 
-Windows requires the .NET 8 SDK and must be built and verified on a Windows host:
+Windows requires the .NET 8 SDK and must be built and verified on a Windows host. The build uses the repository-contained, checksum-verified native helper:
 
 ```powershell
 dotnet test Windows/CodexDuo.Windows.sln -c Release

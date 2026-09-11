@@ -25,6 +25,7 @@
     <ProjectReference Include="..\CodexDuo.Windows.Core\CodexDuo.Windows.Core.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\Vendor\codex-auth\0.3.0-alpha.10\*" Link="Fixtures\Helper\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\CodexDuo.Windows\App.xaml" Link="Fixtures\App.xaml" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\CodexDuo.Windows\App.xaml.cs" Link="Fixtures\App.xaml.cs" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\CodexDuo.Windows\Infrastructure.cs" Link="Fixtures\Infrastructure.cs" CopyToOutputDirectory="PreserveNewest" />

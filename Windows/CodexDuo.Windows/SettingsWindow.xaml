@@ -215,8 +215,6 @@
                 <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                 <StackPanel VerticalAlignment="Center">
                   <TextBlock x:Name="AccountsHeading" Style="{StaticResource SectionHeading}" />
-                  <TextBlock Text="{Binding DependencyText}" Margin="0,2,0,0" FontSize="9.5"
-                             Foreground="{DynamicResource TertiaryTextBrush}" TextTrimming="CharacterEllipsis" />
                 </StackPanel>
                 <Border Grid.Column="1" Padding="7,2" CornerRadius="5" Background="{DynamicResource BadgeBrush}"
                         BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0.5" VerticalAlignment="Center">
@@ -224,17 +222,11 @@
                 </Border>
               </Grid>
 
-              <Border x:Name="InstallBanner" Margin="14,0,14,8" Padding="7" CornerRadius="9"
-                      Background="{DynamicResource InsetBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                      Visibility="{Binding Visibility, ElementName=InstallButton}">
-                <Button x:Name="InstallButton" Style="{StaticResource ActionButton}" HorizontalAlignment="Stretch"
-                        HorizontalContentAlignment="Left" Click="Install_Click">
-                  <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="&#xE896;" Style="{StaticResource FluentIcon}" Margin="0,0,7,0"
-                               Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
-                    <TextBlock x:Name="InstallButtonText" FontSize="10.5" VerticalAlignment="Center" />
-                  </StackPanel>
-                </Button>
+              <Border Margin="14,0,14,8" Padding="9,7" CornerRadius="9"
+                      Background="{DynamicResource InsetBrush}"
+                      Visibility="{Binding HasInstallationError, Converter={StaticResource BoolVisibility}}">
+                <TextBlock Text="{Binding InstallationError}" TextWrapping="Wrap" FontSize="10"
+                           Foreground="{DynamicResource WarningTextBrush}" />
               </Border>
 
               <Grid MinHeight="72" MaxHeight="146" Margin="8,0">
@@ -290,6 +282,15 @@
                 </StackPanel>
               </Grid>
 
+              <TextBlock Text="{Binding Error}" Margin="14,6,14,0" FontSize="10" TextWrapping="Wrap"
+                         Foreground="{DynamicResource WarningTextBrush}"
+                         Visibility="{Binding HasError, Converter={StaticResource BoolVisibility}}" />
+              <TextBlock Text="{Binding Warning}" Margin="14,6,14,0" FontSize="10" TextWrapping="Wrap"
+                         Foreground="{DynamicResource WarningTextBrush}"
+                         Visibility="{Binding HasWarning, Converter={StaticResource BoolVisibility}}" />
+              <TextBlock Text="{Binding LoginStatus}" Margin="14,6,14,0" FontSize="10" TextWrapping="Wrap"
+                         Foreground="{DynamicResource SecondaryTextBrush}"
+                         Visibility="{Binding LoginStatus, Converter={StaticResource StringVisibility}}" />
               <Border Margin="14,6,14,0" Padding="9,7" CornerRadius="8" Background="{DynamicResource InsetBrush}"
                       BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0.5"
                       Visibility="{Binding Text, ElementName=StatusLabel, Converter={StaticResource StringVisibility}}">

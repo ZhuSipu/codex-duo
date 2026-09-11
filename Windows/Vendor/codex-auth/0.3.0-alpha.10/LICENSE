@@ -1,17 +1,6 @@
-# Third-party notices
-
-Codex Duo uses or interoperates with the following MIT-licensed projects:
-
-- [Loongphy/codex-auth](https://github.com/Loongphy/codex-auth) version 0.3.0-alpha.10. macOS and Windows release packages bundle its pinned native executable for account management, quota refresh, and switching. The complete upstream MIT license is included beside the Windows helper.
-- [steipete/CodexBar](https://github.com/steipete/CodexBar), whose native macOS status-item workflow informed this app's menu-bar design.
-
-Codex Duo does not bundle authentication data.
-
-## codex-auth license
-
 MIT License
 
-Copyright (c) 2026-PRESENT Loongphy <https://github.com/loongphy>
+Copyright (c) 2026-PRESENT Loongphy<https://github.com/loongphy>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -30,5 +19,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
-This personal build is not affiliated with or endorsed by OpenAI.

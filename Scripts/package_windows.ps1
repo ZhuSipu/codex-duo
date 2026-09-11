@@ -20,14 +20,17 @@ $zip = Join-Path $dist "Codex-Duo-$version-Windows-$architecture-portable.zip"
 $setup = Join-Path $dist "Codex-Duo-$version-Windows-$architecture-Setup.exe"
 
 foreach ($publishDirectory in @($portablePublish, $installerPublish)) {
-    if (Test-Path -LiteralPath $publishDirectory) { Remove-Item -LiteralPath $publishDirectory -Recurse -Force }
+    $resolvedPublish = [IO.Path]::GetFullPath($publishDirectory)
+    $buildRoot = [IO.Path]::GetFullPath((Join-Path $projectRoot 'build')) + [IO.Path]::DirectorySeparatorChar
+    if (-not $resolvedPublish.StartsWith($buildRoot, [StringComparison]::OrdinalIgnoreCase)) { throw "Unsafe publish directory: $resolvedPublish" }
+    if (Test-Path -LiteralPath $resolvedPublish) { Remove-Item -LiteralPath $resolvedPublish -Recurse -Force }
 }
 New-Item -ItemType Directory -Force -Path $portablePublish, $installerPublish, $dist | Out-Null
 foreach ($artifact in @($zip, $setup)) {
     if (Test-Path -LiteralPath $artifact) { Remove-Item -LiteralPath $artifact -Force }
 }
 
-dotnet test (Join-Path $projectRoot "Windows\CodexDuo.Windows.Tests\CodexDuo.Windows.Tests.csproj") -c Release --nologo
+dotnet test (Join-Path $projectRoot "Windows\CodexDuo.Windows.Tests\CodexDuo.Windows.Tests.csproj") -c Release -p:SyncInstalledCodexDuo=false --nologo
 if ($LASTEXITCODE -ne 0) { throw "Windows tests failed." }
 
 dotnet publish $project -c Release -r $Runtime --self-contained true `
@@ -36,7 +39,7 @@ dotnet publish $project -c Release -r $Runtime --self-contained true `
     -p:DebugType=None -o $portablePublish --nologo
 if ($LASTEXITCODE -ne 0) { throw "Windows portable publish failed." }
 
-dotnet publish $project -c Release -r $Runtime --self-contained false `
+dotnet publish $project -c Release -r $Runtime --self-contained true `
     -p:PublishSingleFile=false -p:DebugType=None -o $installerPublish --nologo
 if ($LASTEXITCODE -ne 0) { throw "Windows installer publish failed." }
 
@@ -59,6 +62,16 @@ function Invoke-AuthenticodeSign([string]$Path) {
     if ($LASTEXITCODE -ne 0) { throw "Authenticode signing failed: $Path" }
 }
 
+foreach ($publishDirectory in @($portablePublish, $installerPublish)) {
+    & (Join-Path $PSScriptRoot 'verify_windows_package.ps1') -PublishDirectory $publishDirectory
+    $helper = Join-Path $publishDirectory 'Helpers\codex-auth.exe'
+    Invoke-AuthenticodeSign $helper
+    # Authenticode changes the on-disk hash. Record the signed payload for runtime integrity checks.
+    $manifestPath = Join-Path $publishDirectory 'Helpers\manifest.json'
+    $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+    $manifest.executableSha256 = (Get-FileHash -LiteralPath $helper -Algorithm SHA256).Hash.ToLowerInvariant()
+    $manifest | ConvertTo-Json | Set-Content -LiteralPath $manifestPath -Encoding utf8
+}
 Invoke-AuthenticodeSign $portableExecutable
 Invoke-AuthenticodeSign $installerExecutable
 Compress-Archive -LiteralPath (Get-ChildItem -LiteralPath $portablePublish).FullName -DestinationPath $zip -CompressionLevel Optimal
