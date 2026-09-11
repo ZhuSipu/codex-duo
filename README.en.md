@@ -109,7 +109,7 @@ app_path=$(./Scripts/build_app.sh)
 open "$app_path"
 ```
 
-The build script downloads a pinned native macOS `codex-auth`, verifies the SHA-256 of both the release archive and executable, then embeds and signs it. The installed app never downloads dependencies at runtime.
+The repository includes pinned native macOS `codex-auth` release archives. The build verifies the SHA-256 of both the archive and executable before embedding and signing it, so neither the build nor the installed app downloads dependencies.
 
 Windows requires the .NET 8 SDK and must be built and verified on a Windows host:
 

@@ -109,7 +109,7 @@ app_path=$(./Scripts/build_app.sh)
 open "$app_path"
 ```
 
-构建脚本会下载固定版本的 macOS 原生 `codex-auth`，校验发布包与可执行文件的 SHA-256 后再嵌入并签名；应用运行时不会下载依赖。
+仓库包含固定版本的 macOS 原生 `codex-auth` 发布包。构建脚本会校验发布包与可执行文件的 SHA-256 后再嵌入并签名，构建和应用运行时都不需要下载依赖。
 
 Windows 需要 .NET 8 SDK，并且必须在 Windows 主机上构建和验证：
 

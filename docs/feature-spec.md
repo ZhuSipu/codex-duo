@@ -42,7 +42,7 @@ Codex Duo depends on:
 - the official Codex desktop app;
 - a `codex-auth` helper for account registry management, usage refresh, login, aliases, removal, and account switching.
 
-The macOS app bundles a pinned, architecture-matched native `codex-auth` executable. It must prefer that bundled copy, sign it as nested code, include its license and exact version, and verify its release archive and executable SHA-256 values during the build. Supported external executable paths remain a development fallback. The installed app must never download or update the helper at runtime.
+The macOS app bundles a pinned, architecture-matched native `codex-auth` executable. The repository must contain the verified upstream release archives so builds do not depend on a runtime download. The build must verify the selected release archive and executable SHA-256 values, sign the executable as nested code, and include its license and exact version. The app must prefer that bundled copy; supported external executable paths remain a development fallback. The installed app must never download or update the helper at runtime.
 
 Windows currently resolves the globally installed npm packages for `codex-auth` and the Codex CLI and invokes their JavaScript entry points through Node.js. Bundled-helper delivery for Windows is Planned and must be implemented and verified on Windows.
 
