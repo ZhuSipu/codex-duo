@@ -224,6 +224,7 @@ Status values are **Implemented**, **Planned**, **Partial**, or **Not applicable
 | Verified account switching and Codex restart | Implemented | Implemented | Windows uses bounded native process control and the packaged-app identifier. |
 | Add, rename, and remove account | Implemented | Implemented | Delegated to `codex-auth`. |
 | Bundled `codex-auth` helper | Implemented | Planned | macOS bundles and signs pinned native ARM64/X64 release binaries at build time; Windows requires independent implementation and verification. |
+| Dependency-free primary installer | Implemented | Planned | macOS requires only the official Codex app; the Windows target is a self-contained per-user installer with the .NET runtime and native helper included. |
 | Appearance modes | Implemented | Implemented | Native rendering differs. |
 | Nine language choices including System | Implemented | Implemented | Both settings surfaces expose the same choices and system fallback. |
 | Launch at login | Implemented | Implemented | Windows uses a verified per-user Run entry. |
