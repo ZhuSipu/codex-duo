@@ -39,9 +39,8 @@ Download the installer and SHA-256 checksum for your system from the latest [Git
 - macOS 14 or later
 - Apple Silicon for current release builds
 - The official Codex App
-- Node.js/npm and `codex-auth`
 
-Download `macOS-arm64.dmg`, open it, and drag **Codex Duo** into **Applications**. A current personal build may not be notarized. Verify the download source, then Control-click the app and choose **Open** for first launch. Do not disable Gatekeeper globally.
+Download `Codex-Duo-<version>-macOS-arm64.dmg`, open it, and drag **Codex Duo** into **Applications**. The account helper is included, so Node.js, npm, and other dependencies are not required. A current personal build may not be notarized. Verify the download source, then Control-click the app and choose **Open** for first launch. Do not disable Gatekeeper globally.
 
 ### Windows
 
@@ -53,9 +52,7 @@ Download `macOS-arm64.dmg`, open it, and drag **Codex Duo** into **Applications*
 
 Run `Codex-Duo-<version>-Windows-x64-Setup.exe` for a per-user installation that needs no administrator privileges. To avoid installing .NET separately, download the self-contained portable ZIP, which includes the runtime. Unsigned builds may trigger SmartScreen; verify the checksum and download source before continuing.
 
-### Install the account helper
-
-Codex Duo detects whether `codex-auth` is available but never installs dependencies silently:
+Windows currently still requires the account helper to be installed separately:
 
 ```shell
 npm install -g @loongphy/codex-auth@next
@@ -64,11 +61,9 @@ codex-auth --help
 
 ## Get started
 
-1. Launch Codex Duo.
-2. Open Settings and choose **Add**.
-3. Complete the official Codex login flow in Terminal.
-4. Return to Codex Duo; the account and its usage will appear automatically.
-5. Select any non-current account to switch.
+1. Launch Codex Duo, open Settings, and choose **Add**.
+2. Complete the official Codex login in Terminal.
+3. Return to Codex Duo and select any non-current account to switch.
 
 Authentication remains owned by Codex and `codex-auth`. Codex Duo never asks for your password or displays access tokens.
 
@@ -88,7 +83,8 @@ Automatic refresh can be Off or run every 1, 2, 5, 10, or 15 minutes. **Refresh 
 
 ## Troubleshooting
 
-- **The menu or tray shows —:** verify that `codex-auth --help` works and at least one account is configured.
+- **The macOS menu shows —:** add at least one account. If Settings reports an incomplete installation, download and reinstall the complete app.
+- **The Windows tray shows —:** verify that `codex-auth --help` works and at least one account is configured.
 - **Usage is marked stale:** check the age label, enable automatic refresh, or choose **Refresh Now**. A failed refresh keeps the newest verified snapshot.
 - **An account will not switch:** stop active work, close Codex manually, and try again.
 - **Launch at login does not work:** install the app in the normal system location, launch it once from there, and enable the setting again.
@@ -112,6 +108,8 @@ macOS requires macOS 14+ and Swift 5.10 command-line tools:
 app_path=$(./Scripts/build_app.sh)
 open "$app_path"
 ```
+
+The build script downloads a pinned native macOS `codex-auth`, verifies the SHA-256 of both the release archive and executable, then embeds and signs it. The installed app never downloads dependencies at runtime.
 
 Windows requires the .NET 8 SDK and must be built and verified on a Windows host:
 

@@ -40,9 +40,13 @@ These native differences must not change the meanings of accounts, usage, refres
 Codex Duo depends on:
 
 - the official Codex desktop app;
-- an externally installed `codex-auth` helper for account registry management, usage refresh, login, aliases, removal, and account switching.
+- a `codex-auth` helper for account registry management, usage refresh, login, aliases, removal, and account switching.
 
-macOS resolves `codex-auth` from the supported user and system executable paths. Windows resolves the globally installed npm packages for `codex-auth` and the Codex CLI and invokes their JavaScript entry points through Node.js.
+The macOS app bundles a pinned, architecture-matched native `codex-auth` executable. It must prefer that bundled copy, sign it as nested code, include its license and exact version, and verify its release archive and executable SHA-256 values during the build. Supported external executable paths remain a development fallback. The installed app must never download or update the helper at runtime.
+
+Windows currently resolves the globally installed npm packages for `codex-auth` and the Codex CLI and invokes their JavaScript entry points through Node.js. Bundled-helper delivery for Windows is Planned and must be implemented and verified on Windows.
+
+A platform that does not bundle the helper may offer user-initiated guided setup when `codex-auth` is missing. The action must state that it installs the helper, run in a visible platform-appropriate terminal, avoid administrator privileges when possible, report failures, and continue into the official `codex-auth login` flow only after installation succeeds. If Node.js/npm is unavailable, direct the user to install it rather than attempting an opaque bootstrap. On a bundled-helper platform, a missing helper means the app installation is incomplete and the user should reinstall the app.
 
 The recommended Windows installer is framework-dependent and requires the x64 Microsoft .NET 8 Desktop Runtime to be installed separately. It must detect a missing runtime before installation and direct the user to the official Microsoft download. The Windows portable archive remains self-contained for environments where installing the runtime separately is undesirable.
 
@@ -112,7 +116,7 @@ Proxy routing preserves existing process-level proxy environment variables. macO
 
 ### Add account
 
-Start the official `codex-auth login` flow in a platform-appropriate terminal. Codex Duo never asks for a password or token. Keep the setup status visible, detect the new registry account automatically, and refresh usage after login. Failure to open the flow is shown as an error.
+Start the official `codex-auth login` flow in a platform-appropriate terminal. Codex Duo never asks for a password or token. Keep the login status visible, detect the new registry account automatically, and refresh usage after login. Login launch failures are shown as actionable errors. If a non-bundled platform supports guided setup, it may install the helper first under section 3. A bundled platform must not expose dependency installation as part of account setup.
 
 ### Rename account
 
@@ -142,7 +146,7 @@ Startup registration uses the platform's native mechanism and reports its real s
 
 Errors must be concise, actionable, and visible in the relevant account or settings surface.
 
-- Missing `codex-auth`: show the dependency as unavailable and provide the supported external installation command without executing it automatically.
+- Missing `codex-auth`: on a bundled platform, report an incomplete app installation and direct the user to reinstall it; on a non-bundled platform, provide its supported setup route.
 - Registry read or decode failure: show unavailable state and the underlying safe error message; do not fabricate data.
 - Command non-zero exit: treat as failure and prefer bounded `stderr`; if empty, show the exit status.
 - Refresh timeout marker: treat as failure even when process status is zero; retain verified cached usage.
@@ -175,7 +179,7 @@ Platform-specific implementations may differ internally but must meet sections 3
 - Do not bundle credentials, account snapshots, analytics, or telemetry.
 - Do not read managed authentication snapshot files.
 - Do not print tokens or credential-bearing command output.
-- Do not silently install, download, or update dependencies at runtime, or weaken OS security controls.
+- Do not silently install, download, or update dependencies at runtime. Bundled helpers are updated only with a new, signed Codex Duo release. A user-initiated guided setup on a non-bundled platform may install `codex-auth` only under the visible-flow requirements in section 3. Never weaken OS security controls.
 - Treat registry and dependency schemas as external inputs that may be missing or malformed.
 - Do not delete `codex-auth` account data during Codex Duo uninstall.
 
@@ -192,6 +196,7 @@ Status values are **Implemented**, **Planned**, **Partial**, or **Not applicable
 | Manual and scheduled refresh | Implemented | Implemented | Delegated to `codex-auth`. |
 | Verified account switching and Codex restart | Implemented | Implemented | Windows uses bounded native process control and the packaged-app identifier. |
 | Add, rename, and remove account | Implemented | Implemented | Delegated to `codex-auth`. |
+| Bundled `codex-auth` helper | Implemented | Planned | macOS bundles and signs pinned native ARM64/X64 release binaries at build time; Windows requires independent implementation and verification. |
 | Appearance modes | Implemented | Implemented | Native rendering differs. |
 | Nine language choices including System | Implemented | Implemented | Both settings surfaces expose the same choices and system fallback. |
 | Launch at login | Implemented | Implemented | Windows uses a verified per-user Run entry. |
