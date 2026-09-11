@@ -135,32 +135,80 @@ public sealed class CodexAuthService
         catch (JsonException)
         {
             return result.Succeeded
-                ? new CommandResult(65, result.StandardOutput, "codex-auth did not return valid JSON. Update codex-auth and retry.")
+                ? new CommandResult(65, result.StandardOutput, "codex-auth did not return valid JSON. Reinstall Codex Duo and retry.")
                 : result;
         }
     }
 
-    public bool OpenLoginInTerminal()
+    public async Task<CommandResult> LoginInTerminalAsync(CancellationToken cancellationToken = default)
     {
         var command = locator.FindCodexAuth();
-        if (command is null) return false;
-
-        var shell = FindOnPath("wt.exe") ?? FindOnPath("powershell.exe");
-        if (shell is null) return false;
-
-        var start = new ProcessStartInfo { FileName = shell, UseShellExecute = true };
-        if (System.IO.Path.GetFileName(shell).Equals("wt.exe", StringComparison.OrdinalIgnoreCase))
+        if (command is null) return new CommandResult(127, string.Empty, IncompleteInstallationMessage);
+        var shell = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System),
+            "WindowsPowerShell", "v1.0", "powershell.exe");
+        var start = new ProcessStartInfo
         {
-            start.ArgumentList.Add("--title");
-            start.ArgumentList.Add("Codex Duo - Add Account");
-            start.ArgumentList.Add("powershell.exe");
+            FileName = shell,
+            UseShellExecute = false,
+            CreateNoWindow = false,
+            WorkingDirectory = Path.GetTempPath(),
+        };
+        WindowsProxyEnvironment.ApplyTo(start.Environment);
+        start.ArgumentList.Add("-NoLogo");
+        start.ArgumentList.Add("-NoProfile");
+        start.ArgumentList.Add("-EncodedCommand");
+        start.ArgumentList.Add(Convert.ToBase64String(System.Text.Encoding.Unicode.GetBytes(BuildLoginScript(command))));
+        try
+        {
+            using var process = Process.Start(start);
+            if (process is null) return new CommandResult(126, string.Empty, "Could not open Windows PowerShell. Choose Add to retry.");
+            await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
+            return new CommandResult(process.ExitCode, string.Empty,
+                process.ExitCode == 0 ? string.Empty : "Login was cancelled or failed. Choose Add to retry.");
         }
-        start.ArgumentList.Add("-NoExit");
-        start.ArgumentList.Add("-Command");
+        catch (Exception error) when (error is IOException or System.ComponentModel.Win32Exception or InvalidOperationException)
+        {
+            return new CommandResult(126, string.Empty, "Could not open the login terminal. Choose Add to retry.");
+        }
+    }
+
+    public const string IncompleteInstallationMessage = "Codex Duo installation is incomplete. Download and reinstall the complete app.";
+
+    public static string BuildLoginScript(ToolCommand command)
+    {
         var arguments = command.PrefixArguments.Concat(["login"]).Select(PowerShellQuote);
-        start.ArgumentList.Add("& " + PowerShellQuote(command.FileName) + " " + string.Join(" ", arguments));
-        Process.Start(start);
-        return true;
+        // Restrict package discovery to the official desktop app and its CLI resource.
+        // Change PATH only in this visible login terminal, never in user settings.
+        return """
+            $ErrorActionPreference = 'Stop'
+            $env:PSModulePath = (Join-Path $PSHOME 'Modules') + ';' + $env:PSModulePath
+            $Host.UI.RawUI.WindowTitle = 'Codex Duo - Add Account'
+            try {
+                $package = Get-AppxPackage -Name OpenAI.Codex | Where-Object { $_.PackageFamilyName -eq 'OpenAI.Codex_2p2nqsd0c76g0' } | Select-Object -First 1
+                $cliDirectory = if ($package) { Join-Path $package.InstallLocation 'app\resources' } else { $null }
+                if ($cliDirectory -and (Test-Path -LiteralPath (Join-Path $cliDirectory 'codex.exe'))) {
+                    $env:PATH = $cliDirectory + ';' + $env:PATH
+                } else {
+                    $cliDirectory = Join-Path $env:LOCALAPPDATA 'OpenAI\Codex\bin\build'
+                    if (Test-Path -LiteralPath (Join-Path $cliDirectory 'codex.exe')) {
+                        $env:PATH = $cliDirectory + ';' + $env:PATH
+                    } elseif (-not (Get-Command codex.exe -ErrorAction SilentlyContinue)) {
+                        throw 'Install and launch the official Codex app, then choose Add again.'
+                    }
+                }
+            """ + "\n& " + PowerShellQuote(command.FileName) + " " + string.Join(" ", arguments) + "\n" + """
+                $loginExitCode = $LASTEXITCODE
+                if ($loginExitCode -ne 0) {
+                    Write-Host 'Login did not complete. Choose Add in Codex Duo to retry.'
+                    Start-Sleep -Seconds 4
+                }
+                exit $loginExitCode
+            } catch {
+                Write-Host 'Login could not start. Check the official Codex app installation and choose Add to retry.'
+                Start-Sleep -Seconds 4
+                exit 126
+            }
+            """;
     }
 
     private Task<CommandResult> RunCodexAuthAsync(
@@ -171,22 +219,13 @@ public sealed class CodexAuthService
     {
         var command = locator.FindCodexAuth();
         return command is null
-            ? Task.FromResult(new CommandResult(127, string.Empty, "codex-auth was not found. Install it with npm install -g @loongphy/codex-auth@next."))
+            ? Task.FromResult(new CommandResult(127, string.Empty, IncompleteInstallationMessage))
             : runner.RunAsync(command, arguments, timeout, captureOutput, cancellationToken);
     }
 
     private static string PowerShellQuote(string value) => "'" + value.Replace("'", "''", StringComparison.Ordinal) + "'";
 
-    private static string? FindOnPath(string fileName)
-    {
-        foreach (var directory in (Environment.GetEnvironmentVariable("PATH") ?? string.Empty).Split(System.IO.Path.PathSeparator))
-        {
-            if (string.IsNullOrWhiteSpace(directory)) continue;
-            var candidate = System.IO.Path.Combine(directory.Trim('"'), fileName);
-            if (File.Exists(candidate)) return candidate;
-        }
-        return null;
-    }
+
 }
 
 public static class CodexAppController

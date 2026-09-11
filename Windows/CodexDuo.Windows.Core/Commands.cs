@@ -1,6 +1,8 @@
 using System.Diagnostics;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Security.Cryptography;
+using System.Security;
 
 namespace CodexDuo.Windows.Core;
 
@@ -99,7 +101,40 @@ public interface IToolLocator
 
 public sealed class ToolLocator : IToolLocator
 {
-    public ToolCommand? FindCodexAuth() => FindNpmTool("codex-auth", "@loongphy", "codex-auth");
+    private readonly string baseDirectory;
+    private readonly bool allowExternalFallback;
+
+    public ToolLocator(string? baseDirectory = null, bool allowExternalFallback = false)
+    {
+        this.baseDirectory = baseDirectory ?? AppContext.BaseDirectory;
+        this.allowExternalFallback = allowExternalFallback;
+    }
+
+    public ToolCommand? FindCodexAuth()
+    {
+        var directory = Path.Combine(baseDirectory, "Helpers");
+        var executable = Path.Combine(directory, "codex-auth.exe");
+        if (Directory.Exists(directory))
+        {
+            // An incomplete package must never silently select a different helper.
+            try
+            {
+                using var manifest = JsonDocument.Parse(File.ReadAllText(Path.Combine(directory, "manifest.json")));
+                var root = manifest.RootElement;
+                if (root.GetProperty("version").GetString() != "0.3.0-alpha.10"
+                    || root.GetProperty("architecture").GetString() != "x64") return null;
+                using var stream = File.OpenRead(executable);
+                var hash = Convert.ToHexString(SHA256.HashData(stream));
+                if (!hash.Equals(root.GetProperty("executableSha256").GetString(), StringComparison.OrdinalIgnoreCase)) return null;
+                return ToolCommand.Executable(executable);
+            }
+            catch (Exception error) when (error is IOException or UnauthorizedAccessException or JsonException or KeyNotFoundException or InvalidOperationException or SecurityException)
+            {
+                return null;
+            }
+        }
+        return allowExternalFallback ? FindNpmTool("codex-auth", "@loongphy", "codex-auth") : null;
+    }
 
     private static ToolCommand? FindNpmTool(string executableName, string scope, string packageName)
     {

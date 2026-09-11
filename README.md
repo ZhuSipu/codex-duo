@@ -47,23 +47,14 @@ Codex Duo 以液态玻璃风格呈现账号与用量信息，用通透材质和�
 - Windows 10 2004 或更高版本，或 Windows 11
 - x64 处理器
 - 官方 Codex App
-- Node.js/npm 与 `codex-auth`
-- 安装版需要 [.NET 8 Desktop Runtime (x64)](https://aka.ms/dotnet/8.0/windowsdesktop-runtime-win-x64.exe)
 
-运行 `Codex-Duo-<版本>-Windows-x64-Setup.exe` 即可完成当前用户安装，无需管理员权限。如果不希望单独安装 .NET 运行时，可以下载已包含运行时的自包含便携 ZIP。未签名构建可能触发 SmartScreen，请先核对校验值与下载来源。
-
-Windows 当前仍需单独安装账号辅助工具：
-
-```shell
-npm install -g @loongphy/codex-auth@next
-codex-auth --help
-```
+运行 `Codex-Duo-<版本>-Windows-x64-Setup.exe` 即可完成无需管理员权限的自包含当前用户安装。便携 ZIP 同样自包含。两个包都内置固定版本的原生 `codex-auth` 与 .NET 运行时，不需要 Node.js、npm 或单独安装辅助工具。未签名构建可能触发 SmartScreen，请先核对校验值与下载来源。
 
 ## 开始使用
 
-1. 启动 Codex Duo，打开设置并点击**添加**。
-2. 在终端中完成 Codex 官方登录。
-3. 返回 Codex Duo，点击任意非当前账号即可切换。
+1. 先启动官方 Codex App，再启动 Codex Duo。
+2. 打开设置并点击**添加**，Codex Duo 会打开可见的 PowerShell 窗口完成官方 Codex 登录。
+3. 返回 Codex Duo，新账户和用量会自动刷新；点击任意非当前账户即可切换。
 
 认证始终由 Codex 与 `codex-auth` 管理。Codex Duo 不会要求你输入密码，也不会显示访问令牌。
 
@@ -84,7 +75,7 @@ codex-auth --help
 ## 常见问题
 
 - **macOS 菜单显示 —：**添加至少一个账号；如果设置页提示安装不完整，请重新下载并安装完整应用。
-- **Windows 托盘显示 —：**确认 `codex-auth --help` 可以运行，并且至少配置了一个账号。
+- **Windows 托盘显示 —：**在设置中点击**添加**来配置第一个账户。如果应用提示安装不完整，请下载并重新安装完整安装包。
 - **用量显示为陈旧：**检查时间标记，启用自动刷新或点击**立即刷新**；刷新失败时会保留最近的已验证数据。
 - **无法切换账号：**先停止活动任务并手动关闭 Codex，然后重试。
 - **登录时启动无效：**将应用安装到系统常规位置，从该位置启动一次后重新开启此设置。
@@ -109,9 +100,9 @@ app_path=$(./Scripts/build_app.sh)
 open "$app_path"
 ```
 
-仓库包含固定版本的 macOS 原生 `codex-auth` 发布包。构建脚本会校验发布包与可执行文件的 SHA-256 后再嵌入并签名，构建和应用运行时都不需要下载依赖。
+仓库包含固定版本的 macOS 和 Windows 原生 `codex-auth` 发布包。构建脚本会校验发布包与可执行文件的 SHA-256 后再嵌入并签名，构建和应用运行时都不需要下载依赖。
 
-Windows 需要 .NET 8 SDK，并且必须在 Windows 主机上构建和验证：
+Windows 需要 .NET 8 SDK，并且必须在 Windows 主机上构建和验证。构建使用仓库内置且经过校验的原生辅助工具：
 
 ```powershell
 dotnet test Windows/CodexDuo.Windows.sln -c Release

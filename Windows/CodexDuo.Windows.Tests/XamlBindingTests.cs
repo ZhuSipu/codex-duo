@@ -140,7 +140,7 @@ public sealed class XamlBindingTests
 
         string[] actionButtons =
         [
-            "OpenTaskbarSettingsButton", "AddButton", "RenameButton", "RemoveButton", "InstallButton", "RefreshButton",
+            "OpenTaskbarSettingsButton", "AddButton", "RenameButton", "RemoveButton", "RefreshButton",
         ];
         foreach (var name in actionButtons)
         {

@@ -65,6 +65,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     private bool isBusy;
     private string? warning;
     private string? error;
+    private string? loginStatus;
 
     public MainViewModel()
     {
@@ -92,11 +93,12 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     public string SettingsText => text["settings"];
     public string QuitText => text["quit"];
     public string GeneralText => text["general"];
-    public string DependencyText => auth.IsAvailable ? text["dependencyReady"] : text["dependency"];
+    public string? LoginStatus { get => loginStatus; private set => Set(ref loginStatus, value); }
     public string AccountCountText => Accounts.Count == 0
         ? text["none"]
         : string.Format(CultureInfo.CurrentCulture, text["accountCount"], Accounts.Count);
-    public bool IsDependencyAvailable => auth.IsAvailable;
+    public bool HasInstallationError => !auth.IsAvailable;
+    public string InstallationError => text["dependency"];
     public bool CanAddAccounts => auth.IsAvailable && Accounts.Count < CodexRegistry.MaximumSupportedAccounts;
     public string EmptyText => Error ?? (auth.IsAvailable ? text["empty"] : text["dependency"]);
     public bool HasAccounts => Accounts.Count > 0;
@@ -133,8 +135,10 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         {
             registry = auth.LoadRegistry();
             RebuildAccounts();
-            Error = null;
+            Error = auth.IsAvailable ? null : text["dependency"];
         }
+        catch (FileNotFoundException) { registry = null; Accounts.Clear(); Error = auth.IsAvailable ? null : text["dependency"]; NotifyAccountState(); }
+        catch (DirectoryNotFoundException) { registry = null; Accounts.Clear(); Error = auth.IsAvailable ? null : text["dependency"]; NotifyAccountState(); }
         catch (Exception loadError) when (loadError is IOException or UnauthorizedAccessException or InvalidDataException or System.Text.Json.JsonException)
         {
             registry = null;
@@ -146,13 +150,13 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     public async Task RefreshAsync(bool manual)
     {
+        if (!manual && !HasAccounts) return;
         await RunExclusiveAsync(async () =>
         {
             var result = await auth.RefreshAsync();
             if (!result.Succeeded)
             {
                 Warning = result.SafeError("Usage refresh failed.");
-                LoadRegistry();
                 return;
             }
 
@@ -205,13 +209,30 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         }, "Another account operation is already running.");
     }
 
-    public bool AddAccount()
+    public Task AddAccountAsync() => RunExclusiveAsync(async () =>
     {
-        if (IsBusy) return false;
-        var opened = auth.OpenLoginInTerminal();
-        if (!opened) Error = text["dependency"];
-        return opened;
-    }
+        if (!CanAddAccounts) { Error = text["dependency"]; return; }
+        Error = null;
+        LoginStatus = text["loginPending"];
+        var result = await auth.LoginInTerminalAsync();
+        if (!result.Succeeded)
+        {
+            LoginStatus = text["loginFailed"];
+            Error = result.ExitCode == 127 ? text["dependency"] : text["loginFailed"];
+            return;
+        }
+        LoadRegistry();
+        if (Error is not null || !HasAccounts)
+        {
+            LoginStatus = text["loginFailed"];
+            return;
+        }
+        LoginStatus = text["loginComplete"];
+        var refresh = await auth.RefreshAsync();
+        if (refresh.Succeeded) { Warning = null; LoadRegistry(); }
+        else Warning = refresh.SafeError("Usage refresh failed.");
+        LoginStatus = text["loginFinished"];
+    }, "Another account operation is already running.");
 
     public Task RenameAccountAsync(CodexAccount account, string? alias) => RunExclusiveAsync(async () =>
     {
@@ -286,8 +307,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         OnPropertyChanged(nameof(HasNoAccounts));
         OnPropertyChanged(nameof(EmptyText));
         OnPropertyChanged(nameof(AccountCountText));
-        OnPropertyChanged(nameof(DependencyText));
-        OnPropertyChanged(nameof(IsDependencyAvailable));
+        OnPropertyChanged(nameof(HasInstallationError));
         OnPropertyChanged(nameof(CanAddAccounts));
     }
 

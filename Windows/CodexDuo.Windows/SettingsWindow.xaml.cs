@@ -91,13 +91,11 @@ public partial class SettingsWindow : Window
         AddButtonText.Text = text["add"];
         RenameButtonText.Text = text["rename"];
         RemoveButtonText.Text = text["remove"];
-        InstallButtonText.Text = text["install"];
         RefreshButtonText.Text = text["refresh"];
         OpenTaskbarSettingsButton.ToolTip = text["openTaskbarSettings"];
         AddButton.ToolTip = text["add"];
         RenameButton.ToolTip = text["rename"];
         RemoveButton.ToolTip = text["remove"];
-        InstallButton.ToolTip = text["install"];
         RefreshButton.ToolTip = text["refresh"];
         SystemAppearance.Content = text["system"];
         LightAppearance.Content = text["light"];
@@ -146,20 +144,9 @@ public partial class SettingsWindow : Window
         RenameButton.IsEnabled = hasSelection && !viewModel.IsBusy;
         RemoveButton.IsEnabled = hasSelection && !viewModel.IsBusy;
         RefreshButton.IsEnabled = viewModel.HasAccounts && !viewModel.IsBusy;
-        InstallButton.Visibility = viewModel.IsDependencyAvailable ? Visibility.Collapsed : Visibility.Visible;
     }
 
-    private void Add_Click(object sender, RoutedEventArgs e)
-    {
-        if (viewModel.AddAccount())
-        {
-            StatusLabel.Text = "Complete login in Terminal, then click Refresh Now.";
-        }
-        else
-        {
-            MessageBox.Show(viewModel.Error ?? viewModel.Text["dependency"], "Codex Duo", MessageBoxButton.OK, MessageBoxImage.Warning);
-        }
-    }
+    private async void Add_Click(object sender, RoutedEventArgs e) => await viewModel.AddAccountAsync();
 
     private async void Rename_Click(object sender, RoutedEventArgs e)
     {
@@ -195,12 +182,6 @@ public partial class SettingsWindow : Window
         await viewModel.RefreshAsync(manual: true);
         StatusLabel.Text = viewModel.Error ?? viewModel.Warning ?? "Refresh requested";
         UpdateButtonState();
-    }
-
-    private void Install_Click(object sender, RoutedEventArgs e)
-    {
-        Clipboard.SetText("npm install -g @loongphy/codex-auth@next");
-        StatusLabel.Text = "Install command copied";
     }
 
     private void OpenTaskbarSettings_Click(object sender, RoutedEventArgs e)

@@ -24,6 +24,16 @@
     <Resource Include="Resources\CodexDuo.Tray.Light.ico" />
     <Resource Include="Resources\CodexDuo.png" />
   </ItemGroup>
+  <ItemGroup>
+    <Content Include="$(IntermediateOutputPath)Helpers\codex-auth.exe" Link="Helpers\codex-auth.exe" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" ExcludeFromSingleFile="true" />
+    <Content Include="$(IntermediateOutputPath)Helpers\manifest.json" Link="Helpers\manifest.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" ExcludeFromSingleFile="true" />
+    <Content Include="$(IntermediateOutputPath)Helpers\LICENSE" Link="Helpers\LICENSE" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" ExcludeFromSingleFile="true" />
+    <Content Include="..\..\THIRD_PARTY_NOTICES.md" Link="THIRD_PARTY_NOTICES.md" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" ExcludeFromSingleFile="true" />
+  </ItemGroup>
+  <Target Name="PrepareBundledCodexAuth" BeforeTargets="PrepareForBuild" Condition="'$(DesignTimeBuild)' != 'true'">
+    <Error Condition="'$(RuntimeIdentifier)' != '' and '$(RuntimeIdentifier)' != 'win-x64'" Text="The bundled helper supports win-x64 only." />
+    <Exec Command="powershell.exe -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\..\..\Scripts\prepare_windows_codex_auth.ps1&quot; -Destination &quot;$(MSBuildProjectDirectory)\$(IntermediateOutputPath)Helpers&quot;" />
+  </Target>
   <Target Name="SyncInstalledCodexDuoAfterBuild" AfterTargets="Build"
           Condition="'$(OS)' == 'Windows_NT'
             and '$(DesignTimeBuild)' != 'true'

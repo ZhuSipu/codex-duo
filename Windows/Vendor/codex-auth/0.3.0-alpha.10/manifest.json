@@ -1,0 +1,9 @@
+{
+  "version": "0.3.0-alpha.10",
+  "architecture": "x64",
+  "sourceUrl": "https://github.com/Loongphy/codex-auth/releases/download/v0.3.0-alpha.10/codex-auth-Windows-X64.zip",
+  "archive": "codex-auth-Windows-X64.zip",
+  "archiveSha256": "6a76f6306c0d5feec06bf21302d6e223ead738195a94a34db72c759adc2e6bca",
+  "executableSha256": "94579c95b9ac5817008a38760037deeec4247170246a2a43e7ecf144bea21af9",
+  "license": "MIT"
+}
