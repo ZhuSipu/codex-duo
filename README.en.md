@@ -38,7 +38,18 @@ Codex Duo presents accounts and usage through a Liquid Glass visual language, co
 
 ## Download and requirements
 
-Download the installer and SHA-256 checksum for your system from the latest [GitHub Release](https://github.com/ZhuSipu/codex-duo/releases/latest).
+Download the installer for your system from the latest [GitHub Release](https://github.com/ZhuSipu/codex-duo/releases/latest), then use the matching SHA-256 file to verify it.
+
+### Choosing a release file
+
+| Platform | Recommended download | Use case |
+| --- | --- | --- |
+| macOS Apple Silicon | `Codex-Duo-<version>-macOS-arm64.dmg` | Standard installation; open it and drag the app to Applications. |
+| Windows x64 | `Codex-Duo-<version>-Windows-x64-Setup.exe` | Recommended; per-user installation with no administrator privileges. |
+| Windows x64 portable | `Codex-Duo-<version>-Windows-x64-portable.zip` | No installation; extract and run directly. |
+| Checksums | `SHA256SUMS-*.txt` | Only for verifying file integrity, not an installer. |
+
+Most users only need the recommended installer for their platform. The macOS Release no longer includes a redundant ZIP installer.
 
 ### macOS
 

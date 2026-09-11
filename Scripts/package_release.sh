@@ -5,12 +5,11 @@ project_dir="${0:A:h:h}"
 output_dir="${1:-$project_dir/dist}"
 version=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$project_dir/Resources/Info.plist")
 architecture=$(uname -m)
-archive="$output_dir/Codex-Duo-$version-macOS-$architecture.zip"
 dmg="$output_dir/Codex-Duo-$version-macOS-$architecture.dmg"
 checksums="$output_dir/SHA256SUMS-macOS-$architecture.txt"
 
 mkdir -p "$output_dir"
-if [[ -e "$archive" || -e "$dmg" || -e "$checksums" ]]; then
+if [[ -e "$dmg" || -e "$checksums" ]]; then
   echo "Release output already exists for version $version" >&2
   exit 1
 fi
@@ -30,9 +29,6 @@ if [[ -n "${CODEX_DUO_NOTARY_PROFILE:-}" ]]; then
   xcrun stapler validate "$app_path"
 fi
 
-ditto -c -k --sequesterRsrc --keepParent "$app_path" "$archive"
-unzip -tq "$archive" >/dev/null
-
 dmg_staging=$(mktemp -d "${TMPDIR:-/tmp}/codex-duo-dmg.XXXXXX")
 trap 'rm -rf "$dmg_staging"' EXIT
 ditto "$app_path" "$dmg_staging/Codex Duo.app"
@@ -48,9 +44,8 @@ fi
 
 (
   cd "$output_dir"
-  shasum -a 256 "${archive:t}" "${dmg:t}" > "${checksums:t}"
+  shasum -a 256 "${dmg:t}" > "${checksums:t}"
 )
 
-echo "$archive"
 echo "$dmg"
 echo "$checksums"

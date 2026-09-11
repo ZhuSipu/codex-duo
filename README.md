@@ -38,7 +38,18 @@ Codex Duo 以液态玻璃风格呈现账号与用量信息，用通透材质和�
 
 ## 下载与要求
 
-从最新 [GitHub Release](https://github.com/ZhuSipu/codex-duo/releases/latest) 下载与你的系统对应的安装包及 SHA-256 校验文件。
+从最新 [GitHub Release](https://github.com/ZhuSipu/codex-duo/releases/latest) 下载与你的系统对应的安装包，并使用同平台的 SHA-256 文件校验下载结果。
+
+### 发布文件怎么选
+
+| 平台 | 推荐下载 | 适用场景 |
+| --- | --- | --- |
+| macOS Apple Silicon | `Codex-Duo-<版本>-macOS-arm64.dmg` | 常规安装；打开后将应用拖入 Applications。 |
+| Windows x64 | `Codex-Duo-<版本>-Windows-x64-Setup.exe` | 推荐方式；当前用户安装，无需管理员权限。 |
+| Windows x64 便携版 | `Codex-Duo-<版本>-Windows-x64-portable.zip` | 不安装到系统，解压后直接运行。 |
+| 校验文件 | `SHA256SUMS-*.txt` | 仅用于校验文件完整性，不是安装包。 |
+
+普通用户只需下载对应平台的推荐安装包；macOS Release 不再提供重复的 ZIP 安装包。
 
 ### macOS
 
