@@ -15,6 +15,8 @@
 
 Codex Duo is designed for people who use multiple Codex accounts. It brings account switching, remaining usage, and reset countdowns into one polished menu-bar panel, with account management and switching handled securely through [`codex-auth`](https://github.com/Loongphy/codex-auth).
 
+“Codex Duo” is a deliberate bilingual double entendre. In English, “Duo” reflects the product’s origins in switching between two accounts; in Chinese, it echoes “多” (duō), meaning “many,” and points to its support for multi-account management. The name begins with two but is not limited to two—preserving the product’s original focus while capturing its broader promise of managing and switching among multiple Codex accounts with ease.
+
 ## Why use Codex Duo
 
 - **One-click switching.** Choose an account and Codex Duo handles the switch, verification, and Codex App relaunch in one straightforward flow.
